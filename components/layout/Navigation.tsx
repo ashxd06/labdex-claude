@@ -7,6 +7,7 @@ export const NAV_LINKS = [
   { href: "/", label: "Inicio" },
   { href: "/contenido", label: "Contenido" },
   { href: "/laboratorio", label: "Laboratorio" },
+  { href: "/labdex-ai", label: "LABDEX AI" },
   { href: "/estudio", label: "Estudio" },
 ];
 
