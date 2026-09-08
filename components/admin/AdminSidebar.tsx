@@ -12,6 +12,7 @@ import {
   Tags,
   Users,
   Settings,
+  Sparkles,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -26,6 +27,7 @@ const SECTIONS = [
 ];
 
 const SYSTEM = [
+  { icon: Sparkles, label: "LABDEX AI", href: "/admin/ai" },
   { icon: Users, label: "Usuarios", href: null },
   { icon: Settings, label: "Configuración", href: null },
 ];
@@ -53,7 +55,11 @@ export function AdminSidebar() {
       </p>
       <nav className="mt-2 flex flex-col gap-0.5">
         {SYSTEM.map((item) => (
-          <SidebarItem key={item.label} {...item} />
+          <SidebarItem
+            key={item.label}
+            {...item}
+            active={item.href ? pathname?.startsWith(item.href) : undefined}
+          />
         ))}
       </nav>
     </aside>
