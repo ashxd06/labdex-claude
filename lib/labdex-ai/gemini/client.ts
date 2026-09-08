@@ -140,10 +140,21 @@ class RestGeminiAdapter implements GeminiAdapter {
       clearTimeout(timeout);
     }
 
-    if (!response.ok) {
-      // Nunca se reenvía el cuerpo crudo del error al cliente (podría
-      // incluir detalles internos); solo el status para diagnóstico.
-      throw new GeminiRequestError(`Gemini respondió con un error.`, response.status);
+if (!response.ok) {
+  const errorBody = await response.text();
+
+  console.error("[labdex-ai:gemini] request failed", {
+    status: response.status,
+    statusText: response.statusText,
+    model,
+    body: errorBody.slice(0, 2000),
+  });
+
+  throw new GeminiRequestError(
+    "Gemini respondió con un error.",
+    response.status
+  );
+}
     }
 
     const data = (await response.json()) as GeminiGenerateContentResponse;
