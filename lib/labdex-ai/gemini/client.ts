@@ -112,33 +112,38 @@ class RestGeminiAdapter implements GeminiAdapter {
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    //----------
 
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: input.systemInstruction }] },
-          contents: toGeminiContents(input),
-          generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 2048,
-          },
-        }),
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        throw new GeminiTimeoutError();
-      }
-      throw new GeminiRequestError("No se pudo contactar a Gemini.");
-    } finally {
-      clearTimeout(timeout);
-    }
+let response: Response;
+
+try {
+  response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: input.systemInstruction }],
+      },
+      contents: toGeminiContents(input),
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 2048,
+      },
+    }),
+    signal: controller.signal,
+  });
+} catch (err) {
+  if (err instanceof Error && err.name === "AbortError") {
+    throw new GeminiTimeoutError();
+  }
+
+  throw new GeminiRequestError("No se pudo contactar a Gemini.");
+} finally {
+  clearTimeout(timeout);
+}
 
 if (!response.ok) {
   const errorBody = await response.text();
@@ -155,18 +160,26 @@ if (!response.ok) {
     response.status
   );
 }
-    }
 
-    const data = (await response.json()) as GeminiGenerateContentResponse;
+const data = (await response.json()) as GeminiGenerateContentResponse;
 
-    if (data.promptFeedback?.blockReason) {
-      throw new GeminiRequestError("La respuesta fue bloqueada por los filtros de seguridad de Gemini.");
-    }
+if (data.promptFeedback?.blockReason) {
+  throw new GeminiRequestError(
+    "La respuesta fue bloqueada por los filtros de seguridad de Gemini."
+  );
+}
 
-    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-    if (!text.trim()) {
-      throw new GeminiRequestError("Gemini devolvió una respuesta vacía.");
-    }
+const text =
+  data.candidates?.[0]?.content?.parts
+    ?.map((p) => p.text ?? "")
+    .join("") ?? "";
+
+if (!text.trim()) {
+  throw new GeminiRequestError("Gemini devolvió una respuesta vacía.");
+}
+
+return text.trim();
+    //------------
 
     return text.trim();
   }
