@@ -4,6 +4,7 @@ import { Logo } from "@/components/layout/Logo";
 const FOOTER_LINKS = [
   { href: "/contenido", label: "Contenido" },
   { href: "/laboratorio", label: "Laboratorio" },
+  { href: "/labdex-ai", label: "LABDEX AI" },
   { href: "/estudio", label: "Estudio" },
   { href: "/contenido/documentos", label: "Documentos" },
 ];
