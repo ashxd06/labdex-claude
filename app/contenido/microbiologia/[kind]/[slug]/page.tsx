@@ -11,6 +11,7 @@ import { getRelationsData } from "@/lib/content/relations";
 import { getPublicUrl } from "@/lib/content/publicUrl";
 import { KIND_SLUG_TO_VALUE, KIND_VALUE_TO_LABEL } from "@/lib/content/kindSlugs";
 import { SampleDataBadge } from "@/components/content/SampleDataBadge";
+import { AskLabdexAiButton } from "@/components/labdex-ai/AskLabdexAiButton";
 import { Badge } from "@/components/ui/Badge";
 import type { Microorganism } from "@/lib/supabase/types";
 
@@ -108,6 +109,14 @@ export default async function MicroorganismDetailPage({
             <Badge tone="primary">{KIND_VALUE_TO_LABEL[kind]}</Badge>
             <SampleDataBadge show={item.is_sample_data} />
           </div>
+        </div>
+
+        <div className="mt-4">
+          <AskLabdexAiButton
+            sourceType="microorganism"
+            slug={item.slug}
+            title={item.scientific_name}
+          />
         </div>
 
         {item.description && <p className="mt-6 text-text-muted">{item.description}</p>}

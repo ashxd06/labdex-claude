@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Breadcrumbs } from "@/components/content/Breadcrumbs";
 import { ResourceDetailSections } from "@/components/content/ResourceDetailSections";
 import { SampleDataBadge } from "@/components/content/SampleDataBadge";
+import { AskLabdexAiButton } from "@/components/labdex-ai/AskLabdexAiButton";
 import { getResourceRowBySlug } from "@/lib/content/queries";
 import type { ClinicalAnalysis } from "@/lib/supabase/types";
 
@@ -58,6 +59,10 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
             {item.name}
           </h1>
           <SampleDataBadge show={item.is_sample_data} />
+        </div>
+
+        <div className="mt-4">
+          <AskLabdexAiButton sourceType="analysis" slug={item.slug} title={item.name} />
         </div>
 
         {item.description && <p className="mt-4 text-text-muted">{item.description}</p>}
