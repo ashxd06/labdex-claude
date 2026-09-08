@@ -23,7 +23,7 @@ describe("Gemini config helpers", () => {
   });
 
   it("usa el modelo por defecto si no se define GEMINI_MODEL", () => {
-    expect(getGeminiModel()).toBe("gemini-3.8-flash");
+    expect(getGeminiModel()).toBe("gemini-2.5-flash-lite");
   });
 
   it("usa GEMINI_MODEL cuando está definido", () => {
