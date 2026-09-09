@@ -112,74 +112,62 @@ class RestGeminiAdapter implements GeminiAdapter {
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    //----------
 
-let response: Response;
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: input.systemInstruction }],
+          },
+          contents: toGeminiContents(input),
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 2048,
+          },
+        }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new GeminiTimeoutError();
+      }
+      throw new GeminiRequestError("No se pudo contactar a Gemini.");
+    } finally {
+      clearTimeout(timeout);
+    }
 
-try {
-  response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: input.systemInstruction }],
-      },
-      contents: toGeminiContents(input),
-      generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 2048,
-      },
-    }),
-    signal: controller.signal,
-  });
-} catch (err) {
-  if (err instanceof Error && err.name === "AbortError") {
-    throw new GeminiTimeoutError();
-  }
+    if (!response.ok) {
+      // Se lee el cuerpo de error de Gemini para poder diagnosticar 400/401/
+      // 403/404/429/5xx en los logs de Vercel, pero nunca se reenvía al
+      // cliente (podría incluir detalles internos) ni se registra la API key.
+      const errorBody = await response.text().catch(() => "");
 
-  throw new GeminiRequestError("No se pudo contactar a Gemini.");
-} finally {
-  clearTimeout(timeout);
-}
+      console.error("[labdex-ai:gemini] request failed", {
+        status: response.status,
+        statusText: response.statusText,
+        model,
+        body: errorBody.slice(0, 2000),
+      });
 
-if (!response.ok) {
-  const errorBody = await response.text();
+      throw new GeminiRequestError("Gemini respondió con un error.", response.status);
+    }
 
-  console.error("[labdex-ai:gemini] request failed", {
-    status: response.status,
-    statusText: response.statusText,
-    model,
-    body: errorBody.slice(0, 2000),
-  });
+    const data = (await response.json()) as GeminiGenerateContentResponse;
 
-  throw new GeminiRequestError(
-    "Gemini respondió con un error.",
-    response.status
-  );
-}
+    if (data.promptFeedback?.blockReason) {
+      throw new GeminiRequestError("La respuesta fue bloqueada por los filtros de seguridad de Gemini.");
+    }
 
-const data = (await response.json()) as GeminiGenerateContentResponse;
-
-if (data.promptFeedback?.blockReason) {
-  throw new GeminiRequestError(
-    "La respuesta fue bloqueada por los filtros de seguridad de Gemini."
-  );
-}
-
-const text =
-  data.candidates?.[0]?.content?.parts
-    ?.map((p) => p.text ?? "")
-    .join("") ?? "";
-
-if (!text.trim()) {
-  throw new GeminiRequestError("Gemini devolvió una respuesta vacía.");
-}
-
-return text.trim();
-    //------------
+    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    if (!text.trim()) {
+      throw new GeminiRequestError("Gemini devolvió una respuesta vacía.");
+    }
 
     return text.trim();
   }
