@@ -72,8 +72,41 @@ export interface GenerateInput {
   userMessage: string;
 }
 
+/**
+ * Entrada multimodal para el pipeline de documentos de Fase 6 (Hub de
+ * Estudio). Es un tipo aparte de `GenerateInput` (que solo admite texto)
+ * para no tocar el contrato usado por LABDEX AI (Fase 5) y sus tests: el
+ * chat general de LABDEX AI sigue llamando a `generate()` exactamente
+ * igual que antes.
+ */
+export interface GeminiFilePart {
+  /** Tipo MIME del archivo, p. ej. "application/pdf". */
+  mimeType: string;
+  /** Contenido en base64 (sin el prefijo "data:...;base64,"). */
+  data: string;
+}
+
+export interface GenerateWithFileInput {
+  systemInstruction: string;
+  /** Instrucción/pregunta que acompaña al archivo. */
+  userMessage: string;
+  file: GeminiFilePart;
+  /** Si es true, se pide a Gemini que la respuesta sea JSON puro (usa
+   * responseMimeType: application/json en la config de generación). */
+  expectJson?: boolean;
+  /** Límite de tokens de salida; por defecto se usa uno mayor que el del
+   * chat conversacional porque el análisis de documentos produce
+   * respuestas estructuradas más largas. */
+  maxOutputTokens?: number;
+}
+
 export interface GeminiAdapter {
   generate(input: GenerateInput): Promise<string>;
+  /** Analiza un archivo (p. ej. una porción de un PDF) enviándolo como
+   * contenido inline a Gemini, que interpreta nativamente texto digital,
+   * páginas escaneadas, imágenes, tablas y esquemas dentro del documento
+   * (Fase 6, §7-10) sin necesitar un motor de OCR separado. */
+  generateWithFile(input: GenerateWithFileInput): Promise<string>;
 }
 
 interface GeminiGenerateContentResponse {
@@ -104,72 +137,109 @@ function toGeminiContents(input: GenerateInput) {
  * simple cubre lo necesario para esta fase sin añadir una dependencia
  * nueva (Fase 5, §28: evitar dependencias innecesarias).
  */
+interface RawGenerateContentRequest {
+  systemInstruction: string;
+  contents: unknown[];
+  generationConfig: Record<string, unknown>;
+}
+
+/** Llamada HTTP compartida a `generateContent`, usada tanto por el chat de
+ * texto (`generate`) como por el análisis de documentos (`generateWithFile`).
+ * Centralizar esto evita duplicar el manejo de timeout/errores/logging. */
+async function callGenerateContent(request: RawGenerateContentRequest): Promise<string> {
+  const apiKey = getApiKeyOrThrow();
+  const model = getGeminiModel();
+  const url = `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:generateContent`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: request.systemInstruction }],
+        },
+        contents: request.contents,
+        generationConfig: request.generationConfig,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new GeminiTimeoutError();
+    }
+    throw new GeminiRequestError("No se pudo contactar a Gemini.");
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!response.ok) {
+    // Se lee el cuerpo de error de Gemini para poder diagnosticar 400/401/
+    // 403/404/429/5xx en los logs de Vercel, pero nunca se reenvía al
+    // cliente (podría incluir detalles internos) ni se registra la API key.
+    const errorBody = await response.text().catch(() => "");
+
+    console.error("[labdex-ai:gemini] request failed", {
+      status: response.status,
+      statusText: response.statusText,
+      model,
+      body: errorBody.slice(0, 2000),
+    });
+
+    throw new GeminiRequestError("Gemini respondió con un error.", response.status);
+  }
+
+  const data = (await response.json()) as GeminiGenerateContentResponse;
+
+  if (data.promptFeedback?.blockReason) {
+    throw new GeminiRequestError("La respuesta fue bloqueada por los filtros de seguridad de Gemini.");
+  }
+
+  const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  if (!text.trim()) {
+    throw new GeminiRequestError("Gemini devolvió una respuesta vacía.");
+  }
+
+  return text.trim();
+}
+
 class RestGeminiAdapter implements GeminiAdapter {
   async generate(input: GenerateInput): Promise<string> {
-    const apiKey = getApiKeyOrThrow();
-    const model = getGeminiModel();
-    const url = `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:generateContent`;
+    return callGenerateContent({
+      systemInstruction: input.systemInstruction,
+      contents: toGeminiContents(input),
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 2048,
+      },
+    });
+  }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
+  async generateWithFile(input: GenerateWithFileInput): Promise<string> {
+    return callGenerateContent({
+      systemInstruction: input.systemInstruction,
+      contents: [
+        {
+          role: "user" as const,
+          parts: [
+            { inlineData: { mimeType: input.file.mimeType, data: input.file.data } },
+            { text: input.userMessage },
+          ],
         },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: input.systemInstruction }],
-          },
-          contents: toGeminiContents(input),
-          generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 2048,
-          },
-        }),
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        throw new GeminiTimeoutError();
-      }
-      throw new GeminiRequestError("No se pudo contactar a Gemini.");
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    if (!response.ok) {
-      // Se lee el cuerpo de error de Gemini para poder diagnosticar 400/401/
-      // 403/404/429/5xx en los logs de Vercel, pero nunca se reenvía al
-      // cliente (podría incluir detalles internos) ni se registra la API key.
-      const errorBody = await response.text().catch(() => "");
-
-      console.error("[labdex-ai:gemini] request failed", {
-        status: response.status,
-        statusText: response.statusText,
-        model,
-        body: errorBody.slice(0, 2000),
-      });
-
-      throw new GeminiRequestError("Gemini respondió con un error.", response.status);
-    }
-
-    const data = (await response.json()) as GeminiGenerateContentResponse;
-
-    if (data.promptFeedback?.blockReason) {
-      throw new GeminiRequestError("La respuesta fue bloqueada por los filtros de seguridad de Gemini.");
-    }
-
-    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-    if (!text.trim()) {
-      throw new GeminiRequestError("Gemini devolvió una respuesta vacía.");
-    }
-
-    return text.trim();
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: input.maxOutputTokens ?? 8192,
+        ...(input.expectJson ? { responseMimeType: "application/json" } : {}),
+      },
+    });
   }
 }
 

@@ -12,6 +12,6 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     environment: "node",
-    include: ["lib/labdex-ai/**/*.test.ts", "lib/calculadoras/**/*.test.ts"],
+    include: ["lib/labdex-ai/**/*.test.ts", "lib/calculadoras/**/*.test.ts", "lib/estudio/**/*.test.ts"],
   },
 });
