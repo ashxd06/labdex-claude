@@ -33,6 +33,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       report={report}
       settings={settings}
       patient={details.patient}
+      order={details.order}
       sample={details.sample}
       items={details.items}
       logoUrl={logoUrl}

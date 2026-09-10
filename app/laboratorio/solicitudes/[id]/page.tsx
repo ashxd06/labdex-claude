@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getOrderWithDetails, getAvailableAnalysesForOrder } from "@/lib/lab/queries";
 import { calculateAge } from "@/lib/lab/shared";
+import { evaluateOrderCompletion } from "@/lib/lab/workflow";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { StatusBadge } from "@/components/lab/StatusBadge";
@@ -20,6 +21,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   const { order, patient, sample, items, report } = details;
   const availableAnalyses = await getAvailableAnalysesForOrder(id);
+  const completion = evaluateOrderCompletion(items.map((item) => ({ resultStatus: item.lab_results?.status ?? null })));
 
   return (
     <div className="flex flex-col gap-6">
@@ -108,6 +110,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         patientId={order.patient_id}
         status={order.status}
         hasReport={Boolean(report)}
+        canComplete={completion.canComplete}
+        pendingReason={completion.reason}
       />
 
       {report && (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/lab/StatusBadge";
+import { ResultFlag } from "@/components/lab/ResultFlag";
 import { saveResult, validateResult } from "@/lib/lab/resultsAndReports";
 import { removeOrderItem } from "@/lib/lab/actions";
 import { QUALITATIVE_OPTIONS, SEMIQUANTITATIVE_OPTIONS } from "@/lib/supabase/labTypes";
@@ -44,6 +45,7 @@ export function ResultEntry({ orderId, item }: { orderId: string; item: OrderIte
         </div>
         <div className="flex items-center gap-2">
           {result && <StatusBadge status={result.status} />}
+          {result?.flag && <ResultFlag flag={result.flag} />}
           <button
             onClick={handleRemove}
             disabled={removing}
