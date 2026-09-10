@@ -70,6 +70,16 @@ export interface GenerateInput {
   systemInstruction: string;
   history: GeminiChatTurn[];
   userMessage: string;
+  /** Si es true, pide a Gemini que la respuesta sea JSON puro (usa
+   * responseMimeType: application/json). Usado por la generación de
+   * flashcards/preguntas de Fase 6.1; el chat conversacional (Fase 5, 6.0)
+   * nunca pasa esto y sigue recibiendo texto libre en Markdown, exactamente
+   * como antes. */
+  expectJson?: boolean;
+  /** Límite de tokens de salida; por defecto 2048 (el mismo valor que usaba
+   * `generate()` antes de añadir este campo), para no cambiar el
+   * comportamiento del chat existente. */
+  maxOutputTokens?: number;
 }
 
 /**
@@ -216,8 +226,9 @@ class RestGeminiAdapter implements GeminiAdapter {
       systemInstruction: input.systemInstruction,
       contents: toGeminiContents(input),
       generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 2048,
+        temperature: input.expectJson ? 0.2 : 0.4,
+        maxOutputTokens: input.maxOutputTokens ?? 2048,
+        ...(input.expectJson ? { responseMimeType: "application/json" } : {}),
       },
     });
   }
