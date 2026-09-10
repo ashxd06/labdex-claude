@@ -5,11 +5,18 @@ import { Pagination } from "@/components/content/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/lab/StatusBadge";
-import type { Sample } from "@/lib/supabase/labTypes";
+import { SampleRowActions } from "@/components/lab/SampleRowActions";
+import type { Sample, SampleStatus } from "@/lib/supabase/labTypes";
 
 export const revalidate = 0;
 
 type SampleRow = Sample & { patients: { first_name: string; last_name: string; internal_code: string } | null };
+
+function formatSampleDate(sample: SampleRow): string {
+  const date = sample.received_date ?? sample.collected_date ?? sample.created_at;
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString("es");
+}
 
 export default async function MuestrasPage({
   searchParams,
@@ -35,7 +42,9 @@ export default async function MuestrasPage({
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-text">
             <TestTube className="size-5 text-primary" /> Muestras
           </h1>
-          <p className="mt-1 text-sm text-text-muted">{total} registradas</p>
+          <p className="mt-1 text-sm text-text-muted">
+            {total} {total === 1 ? "registrada" : "registradas"}
+          </p>
         </div>
         <Link href="/laboratorio/muestras/nueva">
           <Button size="sm">
@@ -46,7 +55,7 @@ export default async function MuestrasPage({
 
       <form className="max-w-sm">
         <label className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 focus-within:border-primary">
-          <Search className="size-4 text-text-muted" />
+          <Search className="size-4 text-text-muted" aria-hidden="true" />
           <input
             type="search"
             name="q"
@@ -72,7 +81,8 @@ export default async function MuestrasPage({
         />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border border-border">
+          {/* Escritorio/tablet: tabla completa */}
+          <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-2 text-text-muted">
                 <tr>
@@ -80,7 +90,11 @@ export default async function MuestrasPage({
                   <th className="px-4 py-3 font-medium">Paciente</th>
                   <th className="px-4 py-3 font-medium">Tipo</th>
                   <th className="px-4 py-3 font-medium">Condición</th>
+                  <th className="px-4 py-3 font-medium">Fecha</th>
                   <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">
+                    <span className="sr-only">Acciones</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -94,14 +108,47 @@ export default async function MuestrasPage({
                     </td>
                     <td className="px-4 py-3 text-text-muted">{s.sample_type}</td>
                     <td className="px-4 py-3 text-text-muted capitalize">{s.condition}</td>
+                    <td className="px-4 py-3 text-text-muted">{formatSampleDate(s)}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={s.status} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <SampleRowActions sampleId={s.id} status={s.status as SampleStatus} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* Móvil: tarjetas, igual patrón que /laboratorio/pacientes */}
+          <div className="flex flex-col gap-3 sm:hidden">
+            {samples.map((s) => (
+              <div key={s.id} className="rounded-lg border border-border bg-surface p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-mono text-xs text-text-faint">{s.sample_code}</p>
+                    <Link
+                      href={`/laboratorio/pacientes/${s.patient_id}`}
+                      className="mt-0.5 block text-sm font-medium text-text hover:text-primary"
+                    >
+                      {s.patients ? `${s.patients.first_name} ${s.patients.last_name}` : "—"}
+                    </Link>
+                  </div>
+                  <SampleRowActions sampleId={s.id} status={s.status as SampleStatus} />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
+                  <span>{s.sample_type}</span>
+                  <span className="capitalize">{s.condition}</span>
+                  <span>{formatSampleDate(s)}</span>
+                </div>
+                <div className="mt-2">
+                  <StatusBadge status={s.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+
           <Pagination page={currentPage} totalPages={totalPages} buildHref={buildHref} />
         </>
       )}

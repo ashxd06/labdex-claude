@@ -4,6 +4,7 @@ import { listResults } from "@/lib/lab/queries";
 import { Pagination } from "@/components/content/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/lab/StatusBadge";
+import { ResultFlag } from "@/components/lab/ResultFlag";
 
 export const revalidate = 0;
 
@@ -19,6 +20,7 @@ interface ResultRow {
   id: string;
   result_value: string | null;
   status: string;
+  flag: "bajo" | "normal" | "alto" | null;
   created_at: string;
   lab_order_items: {
     analysis_id: string;
@@ -80,6 +82,7 @@ export default async function ResultadosPage({
                   <th className="px-4 py-3 font-medium">Paciente</th>
                   <th className="px-4 py-3 font-medium">Análisis</th>
                   <th className="px-4 py-3 font-medium">Resultado</th>
+                  <th className="px-4 py-3 font-medium">Interpretación</th>
                   <th className="px-4 py-3 font-medium">Estado</th>
                 </tr>
               </thead>
@@ -107,6 +110,9 @@ export default async function ResultadosPage({
                         {orderItem?.clinical_analyses?.name ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-text-muted">{r.result_value || "—"}</td>
+                      <td className="px-4 py-3">
+                        <ResultFlag flag={r.flag} />
+                      </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={r.status} />
                       </td>

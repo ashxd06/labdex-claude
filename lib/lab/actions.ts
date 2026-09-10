@@ -4,6 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { labClient } from "@/lib/lab/shared";
 import { getSession } from "@/lib/auth/getSession";
+import { isLabStaff } from "@/lib/permissions";
+import {
+  initialSampleStatus,
+  evaluateOrderCompletion,
+  canTransitionSampleStatus,
+  sampleStatusWhenOrderCompletes,
+  type OrderItemForCompletion,
+} from "@/lib/lab/workflow";
+import type { SampleStatus } from "@/lib/supabase/labTypes";
 
 export interface LabActionState {
   status: "idle" | "error" | "success";
@@ -13,9 +22,16 @@ export interface LabActionState {
 
 const GENERIC_ERROR = "No se pudo completar la operación. Inténtalo de nuevo.";
 
-async function assertAuthenticated() {
-  const { user } = await getSession();
+/**
+ * Segunda capa de defensa (la primera y definitiva es RLS en Postgres, ver
+ * supabase/schema_fase4_security.sql): ningún Server Action del laboratorio
+ * ejecuta una escritura sin antes confirmar que quien llama es personal de
+ * laboratorio. Antes de esta fase solo se exigía sesión iniciada.
+ */
+async function assertLabStaff() {
+  const { user, profile } = await getSession();
   if (!user) throw new Error("Debes iniciar sesión para usar el módulo de laboratorio.");
+  if (!isLabStaff(profile)) throw new Error("No tienes permisos para operar el módulo de laboratorio.");
   return user;
 }
 
@@ -34,7 +50,7 @@ export async function createPatient(
   formData: FormData
 ): Promise<LabActionState> {
   try {
-    const user = await assertAuthenticated();
+    const user = await assertLabStaff();
     const supabase = await labClient();
 
     const firstName = String(formData.get("first_name") || "").trim();
@@ -81,7 +97,7 @@ export async function updatePatient(
   formData: FormData
 ): Promise<LabActionState> {
   try {
-    const user = await assertAuthenticated();
+    const user = await assertLabStaff();
     const supabase = await labClient();
 
     const firstName = String(formData.get("first_name") || "").trim();
@@ -124,7 +140,7 @@ export async function createSample(
   formData: FormData
 ): Promise<LabActionState> {
   try {
-    const user = await assertAuthenticated();
+    const user = await assertLabStaff();
     const supabase = await labClient();
 
     const patientId = String(formData.get("patient_id") || "").trim();
@@ -138,16 +154,27 @@ export async function createSample(
       return { status: "error", message: GENERIC_ERROR };
     }
 
+    // Registrar una muestra significa que el laboratorio ya la tiene en
+    // mano (por eso el formulario pide su condición), así que nace como
+    // "recibida", nunca "pendiente" — ver lib/lab/workflow.ts. Si no se
+    // indicó fecha/hora de recepción, se autocompleta con el momento del
+    // registro, para no dejar una muestra "recibida" sin fecha de
+    // recepción.
+    const receivedDateInput = String(formData.get("received_date") || "").trim();
+    const receivedTimeInput = String(formData.get("received_time") || "").trim();
+    const now = new Date();
+
     const payload = {
       patient_id: patientId,
       sample_code: codeData as string,
       sample_type: sampleType,
       collected_date: String(formData.get("collected_date") || "").trim() || null,
       collected_time: String(formData.get("collected_time") || "").trim() || null,
-      received_date: String(formData.get("received_date") || "").trim() || null,
-      received_time: String(formData.get("received_time") || "").trim() || null,
+      received_date: receivedDateInput || now.toISOString().slice(0, 10),
+      received_time: receivedTimeInput || now.toTimeString().slice(0, 5),
       condition: String(formData.get("condition") || "adecuada"),
       notes: String(formData.get("notes") || "").trim() || null,
+      status: initialSampleStatus(),
       created_by: user.id,
       updated_by: user.id,
     };
@@ -159,6 +186,44 @@ export async function createSample(
 
     revalidatePath("/laboratorio/muestras");
     return { status: "success", message: "Muestra registrada correctamente.", id: data?.id };
+  } catch (err) {
+    return { status: "error", message: err instanceof Error ? err.message : GENERIC_ERROR };
+  }
+}
+
+/**
+ * Avanza el estado de una muestra manualmente desde `/laboratorio/muestras`
+ * (Fase 4, §3: columna de acciones). Solo permite transiciones coherentes
+ * (ver `canTransitionSampleStatus`): no se puede, por ejemplo, mandar una
+ * muestra "recibida" directo a "procesada" saltándose "en_proceso", ni
+ * revivir una ya "procesada"/"rechazada".
+ */
+export async function updateSampleStatus(sampleId: string, nextStatus: SampleStatus): Promise<LabActionState> {
+  try {
+    const user = await assertLabStaff();
+    const supabase = await labClient();
+
+    const { data: sample, error: fetchError } = await supabase
+      .from("samples")
+      .select("status")
+      .eq("id", sampleId)
+      .maybeSingle();
+    if (fetchError || !sample) {
+      return { status: "error", message: "La muestra no existe." };
+    }
+
+    if (!canTransitionSampleStatus(sample.status as SampleStatus, nextStatus)) {
+      return { status: "error", message: `No se puede pasar de "${sample.status}" a "${nextStatus}".` };
+    }
+
+    const { error } = await supabase
+      .from("samples")
+      .update({ status: nextStatus, updated_by: user.id })
+      .eq("id", sampleId);
+    if (error) return { status: "error", message: GENERIC_ERROR };
+
+    revalidatePath("/laboratorio/muestras");
+    return { status: "success" };
   } catch (err) {
     return { status: "error", message: err instanceof Error ? err.message : GENERIC_ERROR };
   }
@@ -180,7 +245,7 @@ export async function createOrder(
   let orderId: string | null = null;
 
   try {
-    const user = await assertAuthenticated();
+    const user = await assertLabStaff();
     const supabase = await labClient();
 
     const { data: codeData, error: codeError } = await supabase.rpc("next_order_code");
@@ -216,7 +281,7 @@ export async function createOrder(
 
 export async function addOrderItem(orderId: string, analysisId: string): Promise<LabActionState> {
   try {
-    const user = await assertAuthenticated();
+    const user = await assertLabStaff();
     const supabase = await labClient();
 
     const { data: analysis } = await supabase
@@ -251,7 +316,7 @@ export async function addOrderItem(orderId: string, analysisId: string): Promise
 
 export async function removeOrderItem(orderId: string, itemId: string): Promise<LabActionState> {
   try {
-    await assertAuthenticated();
+    await assertLabStaff();
     const supabase = await labClient();
     const { error } = await supabase.from("lab_order_items").delete().eq("id", itemId);
     if (error) return { status: "error", message: GENERIC_ERROR };
@@ -262,16 +327,70 @@ export async function removeOrderItem(orderId: string, itemId: string): Promise<
   }
 }
 
+/**
+ * Marca una solicitud como "completada" — pero solo si de verdad lo está
+ * (Fase 4, §5-6): todos sus análisis deben tener un resultado validado. Antes
+ * de esta fase, este botón estaba disponible siempre que la solicitud no
+ * estuviera ya completada/cancelada, sin importar si tenía cero resultados o
+ * resultados aún pendientes.
+ */
 export async function finalizeOrder(orderId: string): Promise<LabActionState> {
   try {
-    await assertAuthenticated();
+    const user = await assertLabStaff();
     const supabase = await labClient();
+
+    const { data: order, error: orderError } = await supabase
+      .from("lab_orders")
+      .select("id, status, sample_id")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (orderError || !order) {
+      return { status: "error", message: "La solicitud no existe." };
+    }
+
+    const { data: items, error: itemsError } = await supabase
+      .from("lab_order_items")
+      .select("id, lab_results(status)")
+      .eq("order_id", orderId);
+    if (itemsError) {
+      return { status: "error", message: GENERIC_ERROR };
+    }
+
+    const completionItems: OrderItemForCompletion[] = (items ?? []).map((item) => {
+      const result = Array.isArray(item.lab_results) ? item.lab_results[0] : item.lab_results;
+      return { resultStatus: result?.status ?? null };
+    });
+
+    const completion = evaluateOrderCompletion(completionItems);
+    if (!completion.canComplete) {
+      return { status: "error", message: completion.reason ?? GENERIC_ERROR };
+    }
+
     const { error } = await supabase
       .from("lab_orders")
-      .update({ status: "completada", completed_at: new Date().toISOString() })
+      .update({ status: "completada", completed_at: new Date().toISOString(), updated_by: user.id })
       .eq("id", orderId);
     if (error) return { status: "error", message: GENERIC_ERROR };
+
+    // La muestra avanza junto con su solicitud (Fase 4, §5): si sigue en
+    // "recibida"/"en_proceso" pasa a "procesada"; si el personal ya la
+    // había rechazado manualmente, eso no se sobrescribe.
+    if (order.sample_id) {
+      const { data: sample } = await supabase
+        .from("samples")
+        .select("status")
+        .eq("id", order.sample_id)
+        .maybeSingle();
+      if (sample) {
+        const nextStatus = sampleStatusWhenOrderCompletes(sample.status as SampleStatus);
+        if (nextStatus !== sample.status) {
+          await supabase.from("samples").update({ status: nextStatus, updated_by: user.id }).eq("id", order.sample_id);
+        }
+      }
+    }
+
     revalidatePath(`/laboratorio/solicitudes/${orderId}`);
+    revalidatePath("/laboratorio/muestras");
     return { status: "success", message: "Solicitud finalizada." };
   } catch (err) {
     return { status: "error", message: err instanceof Error ? err.message : GENERIC_ERROR };
@@ -280,7 +399,7 @@ export async function finalizeOrder(orderId: string): Promise<LabActionState> {
 
 export async function cancelOrder(orderId: string): Promise<LabActionState> {
   try {
-    await assertAuthenticated();
+    await assertLabStaff();
     const supabase = await labClient();
     const { error } = await supabase.from("lab_orders").update({ status: "cancelada" }).eq("id", orderId);
     if (error) return { status: "error", message: GENERIC_ERROR };

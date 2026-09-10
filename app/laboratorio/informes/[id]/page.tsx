@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Download } from "lucide-react";
 import { getReportById, getOrderWithDetails } from "@/lib/lab/queries";
 import { calculateAge } from "@/lib/lab/shared";
+import { evaluateReportIssuance } from "@/lib/lab/workflow";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/lab/StatusBadge";
+import { ResultFlag } from "@/components/lab/ResultFlag";
 import { ReportActions } from "@/components/lab/ReportActions";
 
 export const revalidate = 0;
@@ -16,7 +18,8 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
 
   const details = await getOrderWithDetails(report.order_id);
   if (!details || !details.patient) notFound();
-  const { patient, sample, items } = details;
+  const { order, patient, sample, items } = details;
+  const issuance = evaluateReportIssuance(order.status);
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,6 +74,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                 <th className="px-4 py-3 font-medium">Resultado</th>
                 <th className="px-4 py-3 font-medium">Unidad</th>
                 <th className="px-4 py-3 font-medium">Valores de referencia</th>
+                <th className="px-4 py-3 font-medium">Interpretación</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -81,6 +85,9 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                   <td className="px-4 py-3 text-text-muted">{item.lab_results?.unit || "—"}</td>
                   <td className="px-4 py-3 text-text-muted">
                     {item.lab_results?.reference_range_text || "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <ResultFlag flag={item.lab_results?.flag ?? null} />
                   </td>
                 </tr>
               ))}
@@ -96,7 +103,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
         >
           <Download className="size-4" /> Descargar PDF
         </a>
-        <ReportActions reportId={id} status={report.status} />
+        <ReportActions reportId={id} status={report.status} canIssue={issuance.canIssue} pendingReason={issuance.reason} />
       </div>
     </div>
   );

@@ -7,7 +7,7 @@
  * Por ahora se define a mano, cubriendo Fase 1 (auth/roles) y Fase 2
  * (base de conocimiento).
  */
-export type AppRole = "user" | "admin";
+export type AppRole = "user" | "admin" | "lab_staff";
 export type ContentStatus = "draft" | "published" | "archived";
 export type MicroorganismKind = "bacteria" | "hongo" | "virus" | "parasito";
 

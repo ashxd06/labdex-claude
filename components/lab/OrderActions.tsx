@@ -12,11 +12,15 @@ export function OrderActions({
   patientId,
   status,
   hasReport,
+  canComplete,
+  pendingReason,
 }: {
   orderId: string;
   patientId: string;
   status: string;
   hasReport: boolean;
+  canComplete: boolean;
+  pendingReason: string | null;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -44,23 +48,35 @@ export function OrderActions({
     });
   }
 
+  const isOpen = status !== "completada" && status !== "cancelada";
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {status !== "completada" && status !== "cancelada" && (
-        <Button variant="secondary" size="sm" onClick={handleFinalize} loading={pending}>
-          <CheckCircle2 className="size-4" /> Finalizar solicitud
-        </Button>
-      )}
-      {status !== "cancelada" && status !== "completada" && (
-        <Button variant="ghost" size="sm" onClick={handleCancel} loading={pending}>
-          <XCircle className="size-4" /> Cancelar
-        </Button>
-      )}
-      {!hasReport && (
-        <Button size="sm" onClick={handleGenerateReport} loading={pending}>
-          <FileStack className="size-4" /> Generar informe
-        </Button>
-      )}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        {isOpen && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleFinalize}
+            loading={pending}
+            disabled={!canComplete}
+            title={!canComplete && pendingReason ? pendingReason : undefined}
+          >
+            <CheckCircle2 className="size-4" /> Finalizar solicitud
+          </Button>
+        )}
+        {isOpen && (
+          <Button variant="ghost" size="sm" onClick={handleCancel} loading={pending}>
+            <XCircle className="size-4" /> Cancelar
+          </Button>
+        )}
+        {!hasReport && (
+          <Button size="sm" onClick={handleGenerateReport} loading={pending}>
+            <FileStack className="size-4" /> Generar informe
+          </Button>
+        )}
+      </div>
+      {isOpen && !canComplete && pendingReason && <p className="text-xs text-text-faint">{pendingReason}</p>}
     </div>
   );
 }

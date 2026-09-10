@@ -14,6 +14,19 @@ export function isAdmin(profile: Profile | null): boolean {
   return profile?.role === "admin";
 }
 
+/**
+ * Personal de laboratorio: puede operar `/laboratorio` (pacientes, muestras,
+ * solicitudes, resultados, informes). Un admin siempre cuenta como personal
+ * de laboratorio (nunca queda bloqueado por este cambio). Introducido en
+ * Fase 4 (mejoras de seguridad): antes de esto, CUALQUIER usuario
+ * autenticado —incluido alguien que solo se registró para usar el Hub de
+ * Estudio— podía leer y modificar datos clínicos, tanto desde la interfaz
+ * como directamente contra Supabase con su propio JWT.
+ */
+export function isLabStaff(profile: Profile | null): boolean {
+  return profile?.role === "admin" || profile?.role === "lab_staff";
+}
+
 export function isAuthenticated(user: { id: string } | null): boolean {
   return user !== null;
 }
