@@ -5,14 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Loading } from "@/components/ui/Loading";
 import { OpenOriginalButton } from "@/components/estudio/OpenOriginalButton";
 import { STATUS_LABELS, STATUS_TONES } from "@/components/estudio/statusMeta";
-import {
-  ProcessingNotesBanner,
-  SummaryCard,
-  KeyConceptsCard,
-  MustRememberCard,
-  ExplanationCard,
-} from "@/components/estudio/StudySections";
-import { MaterialChat } from "@/components/estudio/MaterialChat";
+import { MaterialWorkspaceTabs } from "@/components/estudio/MaterialWorkspaceTabs";
 import { getSession } from "@/lib/auth/getSession";
 import { estudioClient } from "@/lib/estudio/shared";
 import { toMaterialContent, toSummaryView, type StudyMaterialRecord } from "@/lib/estudio/types";
@@ -81,24 +74,8 @@ export default async function StudySpacePage({ params }: { params: Promise<{ id:
       )}
 
       {content && (
-        <div className="mt-6 flex flex-col gap-6">
-          <ProcessingNotesBanner notes={content.processingNotes} />
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="flex flex-col gap-6">
-              <SummaryCard summary={content.summary} />
-              <KeyConceptsCard keyConcepts={content.keyConcepts} />
-              <MustRememberCard mustRemember={content.mustRemember} />
-              <ExplanationCard explanation={content.simpleExplanation} />
-            </div>
-
-            <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text">
-                Pregúntale a tu material
-              </h2>
-              <MaterialChat materialId={material.id} />
-            </div>
-          </div>
+        <div className="mt-6">
+          <MaterialWorkspaceTabs materialId={material.id} content={content} />
         </div>
       )}
     </div>
