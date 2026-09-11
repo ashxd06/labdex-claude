@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { FileUploadField } from "@/components/admin/crud/FileUploadField";
+import { ContentAssistantPanel } from "@/components/admin/assistant/ContentAssistantPanel";
 
 const initialState: CrudActionState = { status: "idle" };
 
@@ -16,12 +17,18 @@ interface ResourceFormProps {
   resourceKey: string;
   record?: Record<string, unknown>;
   categories?: { id: string; name: string }[];
+  /** Si es false, no se muestra el Asistente LABDEX (p. ej. para un
+   * administrador sin ese permiso específico — hoy siempre es visible para
+   * cualquier admin, ver ContentAssistantPanel/actions.ts para el gate real
+   * en servidor). */
+  showAssistant?: boolean;
 }
 
-export function ResourceForm({ resourceKey, record, categories }: ResourceFormProps) {
+export function ResourceForm({ resourceKey, record, categories, showAssistant = true }: ResourceFormProps) {
   const config = getResourceConfig(resourceKey);
   const isEdit = Boolean(record?.id);
   const router = useRouter();
+  const formId = `resource-form-${resourceKey}`;
 
   const action = isEdit
     ? updateRecord.bind(null, resourceKey, String(record!.id))
@@ -38,9 +45,18 @@ export function ResourceForm({ resourceKey, record, categories }: ResourceFormPr
 
   return (
     <div className="flex flex-col gap-6">
+      {showAssistant && (
+        <ContentAssistantPanel
+          resourceKey={resourceKey}
+          formId={formId}
+          isEdit={isEdit}
+          excludeId={record?.id ? String(record.id) : undefined}
+        />
+      )}
+
       <Card>
         <CardBody>
-          <form action={formAction} className="flex flex-col gap-4">
+          <form id={formId} action={formAction} className="flex flex-col gap-4">
             {config.fields
               .filter((f) => f.type !== "file")
               .map((field, index, arr) => {

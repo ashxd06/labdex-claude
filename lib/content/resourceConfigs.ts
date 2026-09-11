@@ -9,16 +9,18 @@ import {
 } from "lucide-react";
 
 /**
- * Recursos "simples" administrados con el CRUD genérico
- * (components/admin/crud + lib/content/actions.ts).
- *
- * `microorganisms` NO está aquí: tiene su propio CRUD dedicado en
- * app/admin/microorganismos porque necesita tabs, imágenes y relaciones.
+ * Recursos administrados con el CRUD genérico
+ * (components/admin/crud + lib/content/actions.ts), incluido
+ * `microorganisms` — su página de edición agrega además un
+ * `RelationsManager` aparte (relaciones con medios/pruebas/procedimientos),
+ * pero el formulario en sí es el mismo `ResourceForm` genérico.
  *
  * IMPORTANTE: este objeto también funciona como allowlist. Las Server
  * Actions genéricas (`createRecord`, `updateRecord`, `deleteRecord`) solo
  * aceptan un `resourceKey` que exista aquí, así el nombre de tabla nunca
- * llega directamente desde un formulario sin validar.
+ * llega directamente desde un formulario sin validar. El Asistente LABDEX
+ * de contenido (`lib/labdex-ai/admin/*`) reutiliza esta misma allowlist:
+ * solo puede operar sobre estas claves, nunca sobre tablas de Fase 4.
  */
 
 export type FieldType = "text" | "textarea" | "select" | "checkbox" | "file";
