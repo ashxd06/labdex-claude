@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSession } from "@/lib/auth/getSession";
 import { estudioClient } from "@/lib/estudio/shared";
 import { pickRandomIds, buildErrorReviewQuestionIds } from "@/lib/estudio/practice/attempts";
+import { loadReadyOwnedMaterial } from "@/lib/estudio/practice/access";
+import { generateQuestionsFromMaterial } from "@/lib/estudio/practice/generate";
 import {
   toAttemptSummaryView,
   toQuestionPromptView,
@@ -11,12 +13,20 @@ import {
   type StudyExamAttemptRecord,
   type StudyQuestionRecord,
 } from "@/lib/estudio/practice/types";
+import { getQuestionsForAdaptive, getQuestionPerformance } from "@/lib/estudio/adaptive/queries";
+import { groupQuestionIdsByTopic } from "@/lib/estudio/adaptive/topics";
+import { buildTopicStats, computeTopicMastery, computeAccuracy } from "@/lib/estudio/adaptive/mastery";
+import { selectAdaptiveQuestionIds } from "@/lib/estudio/adaptive/priority";
 
 export const dynamic = "force-dynamic";
 
-const VALID_MODES: AttemptMode[] = ["practica", "examen", "repaso_errores"];
+const VALID_MODES: AttemptMode[] = ["practica", "examen", "repaso_errores", "inteligente"];
 const VALID_DIFFICULTIES: ExamDifficulty[] = ["easy", "normal", "hard"];
 const DEFAULT_COUNT = 10;
+// Si faltan preguntas para completar una sesión de Repaso Inteligente,
+// generar al menos este lote (Fase 6.2, §13) en vez de uno por uno, para no
+// disparar generaciones diminutas repetidas.
+const MIN_ADAPTIVE_GENERATION_BATCH = 5;
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -133,6 +143,81 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (questionIds.length === 0) {
       return errorResponse("No tuviste errores en ese intento; no hay nada que repasar.", 422);
     }
+  } else if (mode === "inteligente") {
+    const count = typeof body.count === "number" && body.count > 0 ? Math.round(body.count) : DEFAULT_COUNT;
+
+    // Cargar el material (para los keyConcepts que definen "tema", Fase
+    // 6.2 §8) — reutiliza exactamente la misma comprobación de propiedad
+    // que usan /flashcards y /questions.
+    const loaded = await loadReadyOwnedMaterial(supabase, materialId, user.id);
+    if (!loaded.ok) return errorResponse(loaded.error, loaded.status);
+
+    let questions = await getQuestionsForAdaptive(supabase, user.id, materialId);
+
+    // Si no hay suficientes preguntas guardadas para armar la sesión,
+    // generar el faltante reutilizando la generación de Fase 6.1 (§13) —
+    // nunca un sistema de IA aparte. Best-effort: si Gemini falla o no está
+    // configurado, se continúa igual con lo que ya existía.
+    if (questions.length < count) {
+      const shortfall = Math.max(count - questions.length, MIN_ADAPTIVE_GENERATION_BATCH);
+      try {
+        const generated = await generateQuestionsFromMaterial({
+          materialTitle: loaded.material.title,
+          content: loaded.content,
+          count: shortfall,
+          existingQuestions: [], // el propio prompt ya evita duplicar contra sí mismo dentro del lote
+        });
+        if (generated.length > 0) {
+          await supabase.from("study_questions").insert(
+            generated.map((q) => ({
+              material_id: materialId,
+              user_id: user.id,
+              question: q.question,
+              options: q.options,
+              correct_answer_index: q.correctAnswerIndex,
+              explanation: q.explanation,
+              source_pages: q.sourcePages,
+              difficulty: q.difficulty,
+            }))
+          );
+          questions = await getQuestionsForAdaptive(supabase, user.id, materialId);
+        }
+      } catch (err) {
+        console.warn("[estudio:attempts] adaptive shortfall generation skipped", err);
+      }
+    }
+
+    if (questions.length === 0) {
+      return errorResponse(
+        "Todavía no hay preguntas generadas para este material. Genera preguntas antes de empezar.",
+        422
+      );
+    }
+
+    const performanceByQuestion = await getQuestionPerformance(supabase, user.id, materialId);
+    const topicToQuestionIds = groupQuestionIdsByTopic(questions, loaded.content.keyConcepts);
+    const topicMastery = buildTopicStats(topicToQuestionIds, performanceByQuestion).map(computeTopicMastery);
+
+    const topicByQuestionId = new Map<string, string>();
+    for (const [topic, ids] of topicToQuestionIds) {
+      for (const id of ids) topicByQuestionId.set(id, topic);
+    }
+    const topicScoreByTopic = new Map(topicMastery.map((t) => [t.topic, t.score]));
+
+    const totalAnswered = [...performanceByQuestion.values()].reduce((sum, p) => sum + p.timesAnswered, 0);
+    const totalCorrect = [...performanceByQuestion.values()].reduce((sum, p) => sum + p.timesCorrect, 0);
+    // Sin historial todavía: usar un puntaje neutral (ni fácil ni difícil)
+    // en vez de asumir buen o mal rendimiento sin evidencia.
+    const overallScore = totalAnswered > 0 ? computeAccuracy(totalCorrect, totalAnswered) : 0.5;
+
+    questionIds = selectAdaptiveQuestionIds(
+      questions,
+      performanceByQuestion,
+      topicByQuestionId,
+      topicScoreByTopic,
+      overallScore,
+      count
+    );
   } else {
     const count = typeof body.count === "number" && body.count > 0 ? Math.round(body.count) : DEFAULT_COUNT;
     const difficulty =

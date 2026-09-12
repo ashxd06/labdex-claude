@@ -8,7 +8,7 @@ import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 
-type AttemptMode = "practica" | "examen" | "repaso_errores";
+type AttemptMode = "practica" | "examen" | "repaso_errores" | "inteligente";
 type ExamDifficulty = "easy" | "normal" | "hard";
 
 interface QuestionPromptView {
@@ -61,7 +61,7 @@ export function AttemptFlow({
   onBack,
 }: {
   materialId: string;
-  mode: "practica" | "examen";
+  mode: "practica" | "examen" | "inteligente";
   onBack: () => void;
 }) {
   const [step, setStep] = useState<Step>("setup");
@@ -248,7 +248,7 @@ export function AttemptFlow({
     </button>
   );
 
-  const title = mode === "examen" ? "Modo examen" : "Preguntas";
+  const title = mode === "examen" ? "Modo examen" : mode === "inteligente" ? "Repaso inteligente" : "Preguntas";
 
   if (step === "setup") {
     return (
@@ -258,6 +258,8 @@ export function AttemptFlow({
         <p className="mt-1 text-sm text-text-muted">
           {mode === "examen"
             ? "Pon a prueba tus conocimientos. No verás la respuesta correcta hasta terminar."
+            : mode === "inteligente"
+            ? "LABDEX elige las preguntas según tu historial: prioriza errores, temas débiles y preguntas que no practicas hace tiempo."
             : "Responde preguntas de este material y recibe corrección al instante."}
         </p>
 
@@ -308,8 +310,13 @@ export function AttemptFlow({
                 )}
 
                 <div className="flex flex-col gap-2 pt-1">
-                  {availableQuestions === 0 && (
+                  {availableQuestions === 0 && mode !== "inteligente" && (
                     <p className="text-sm text-warning">Todavía no hay preguntas generadas para este material.</p>
+                  )}
+                  {availableQuestions === 0 && mode === "inteligente" && (
+                    <p className="text-sm text-text-muted">
+                      Todavía no hay preguntas generadas; LABDEX generará algunas automáticamente al comenzar.
+                    </p>
                   )}
                   <Button variant="secondary" size="sm" loading={generating} onClick={handleGenerateQuestions}>
                     <Sparkles className="size-4" aria-hidden="true" />
@@ -317,7 +324,7 @@ export function AttemptFlow({
                   </Button>
                   <Button
                     loading={starting}
-                    disabled={!availableQuestions}
+                    disabled={!availableQuestions && mode !== "inteligente"}
                     onClick={() =>
                       startAttempt({
                         mode,
@@ -326,7 +333,7 @@ export function AttemptFlow({
                       })
                     }
                   >
-                    {mode === "examen" ? "Comenzar examen" : "Practicar"}
+                    {mode === "examen" ? "Comenzar examen" : mode === "inteligente" ? "Comenzar repaso" : "Practicar"}
                   </Button>
                 </div>
               </>
@@ -467,7 +474,11 @@ export function AttemptFlow({
         <Card className="max-w-lg">
           <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
             <p className="text-sm font-medium uppercase tracking-wide text-text-muted">
-              {activeMode === "examen" ? "Examen finalizado" : "Sesión finalizada"}
+              {activeMode === "examen"
+                ? "Examen finalizado"
+                : activeMode === "inteligente"
+                ? "Repaso inteligente finalizado"
+                : "Sesión finalizada"}
             </p>
             <p className="text-4xl font-semibold text-text">{attempt.scorePercent}%</p>
             <p className="text-sm text-text-muted">

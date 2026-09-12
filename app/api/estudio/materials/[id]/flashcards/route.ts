@@ -11,6 +11,7 @@ import {
 } from "@/lib/estudio/practice/generate";
 import { PracticeGenerationError } from "@/lib/estudio/practice/generate";
 import { toFlashcardView, type StudyFlashcardRecord } from "@/lib/estudio/practice/types";
+import { sortFlashcardsByPriority } from "@/lib/estudio/adaptive/flashcardPriority";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,18 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-/** GET: lista las flashcards ya generadas para este material (Fase 6.1, §37:
- * deben persistir; el estudiante no debería perderlas al recargar). */
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+/**
+ * GET: lista las flashcards ya generadas para este material (Fase 6.1, §37:
+ * deben persistir; el estudiante no debería perderlas al recargar).
+ *
+ * `?order=priority` (Fase 6.2, §19-20): en vez del orden de creación,
+ * devuelve las flashcards ordenadas por prioridad de repaso —las que se
+ * fallan más, no se ven hace tiempo, o nunca se han visto, primero—. Es
+ * opcional y no cambia el comportamiento por defecto para no afectar a
+ * otros usos de este endpoint; el estudio de flashcards (`FlashcardsPanel`)
+ * lo pide explícitamente.
+ */
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: materialId } = await params;
   const { user } = await getSession();
   if (!user) return errorResponse("Debes iniciar sesión.", 401);
@@ -39,7 +49,23 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return errorResponse("No se pudieron cargar las flashcards.", 500);
   }
 
-  const flashcards = ((data ?? []) as StudyFlashcardRecord[]).map(toFlashcardView);
+  let records = (data ?? []) as StudyFlashcardRecord[];
+
+  const orderParam = new URL(request.url).searchParams.get("order");
+  if (orderParam === "priority") {
+    records = sortFlashcardsByPriority(
+      records.map((r) => ({
+        id: r.id,
+        timesSeen: r.times_seen,
+        timesKnown: r.times_known,
+        lastKnown: r.last_known,
+        lastReviewedAt: r.last_reviewed_at,
+        __record: r,
+      }))
+    ).map((r) => r.__record);
+  }
+
+  const flashcards = records.map(toFlashcardView);
   return NextResponse.json({ flashcards });
 }
 
