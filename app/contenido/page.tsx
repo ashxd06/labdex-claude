@@ -2,22 +2,33 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Breadcrumbs } from "@/components/content/Breadcrumbs";
 import { CategoryCard } from "@/components/content/CategoryCard";
-import { listResourceRows, countResourceRows } from "@/lib/content/queries";
+import {
+  listResourceRows,
+  countResourceRowsResult,
+  getCategoryContentCounts,
+} from "@/lib/content/queries";
 import type { Category } from "@/lib/supabase/types";
 
 export const revalidate = 0;
 
 export default async function ContenidoPage() {
-  const categories = await listResourceRows<Category>("categories", {
-    onlyActive: true,
-    orderBy: "display_order",
-    ascending: true,
-  });
+  const [categories, microorganismCountResult] = await Promise.all([
+    listResourceRows<Category>("categories", {
+      onlyActive: true,
+      orderBy: "display_order",
+      ascending: true,
+    }),
+    countResourceRowsResult("microorganisms"),
+  ]);
 
-  // Por ahora solo microbiología tiene contenido propio (microorganismos);
-  // el resto de categorías mostrarán su contador según crezca su contenido
-  // relacionado (pruebas, procedimientos, análisis) en /contenido/[categoria].
-  const microorganismCount = await countResourceRows("microorganisms");
+  // Microbiología tiene tabla propia (microorganisms); el resto de
+  // categorías muestran su contenido real vía laboratory_tests/procedures/
+  // clinical_analyses filtrados por category_id (Fase 7, §1) — las mismas
+  // tres tablas que ya lista /contenido/[categoria] al entrar a cada una.
+  const nonMicrobiologiaIds = categories
+    .filter((c) => c.type !== "microbiologia")
+    .map((c) => c.id);
+  const categoryCountsResult = await getCategoryContentCounts(nonMicrobiologiaIds);
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -30,16 +41,27 @@ export default async function ContenidoPage() {
         </p>
 
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category) => (
-            <CategoryCard
-              key={category.id}
-              slug={category.slug}
-              name={category.name}
-              description={category.description}
-              icon={category.icon}
-              count={category.type === "microbiologia" ? microorganismCount : 0}
-            />
-          ))}
+          {categories.map((category) => {
+            const isMicrobiologia = category.type === "microbiologia";
+            const count = isMicrobiologia
+              ? microorganismCountResult.error === null
+                ? microorganismCountResult.count
+                : null
+              : categoryCountsResult.error === null
+                ? (categoryCountsResult.counts[category.id] ?? 0)
+                : null;
+
+            return (
+              <CategoryCard
+                key={category.id}
+                slug={category.slug}
+                name={category.name}
+                description={category.description}
+                icon={category.icon}
+                count={count}
+              />
+            );
+          })}
         </div>
 
         {categories.length === 0 && (

@@ -17,6 +17,8 @@ export default defineConfig({
       "lib/calculadoras/**/*.test.ts",
       "lib/estudio/**/*.test.ts",
       "lib/lab/**/*.test.ts",
+      "lib/content/**/*.test.ts",
+      "lib/permissions/**/*.test.ts",
     ],
   },
 });

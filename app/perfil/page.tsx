@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { ShieldCheck, Mail, LogOut } from "lucide-react";
 import { getSession } from "@/lib/auth/getSession";
+import { getRoleLabel } from "@/lib/permissions";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -35,8 +36,12 @@ export default async function PerfilPage() {
             </span>
             <div>
               <p className="text-sm font-semibold text-text">{displayName}</p>
-              <Badge tone={profile?.role === "admin" ? "accent" : "neutral"}>
-                {profile?.role === "admin" ? "Administrador" : "Usuario"}
+              <Badge
+                tone={
+                  profile?.role === "admin" ? "accent" : profile?.role === "lab_staff" ? "primary" : "neutral"
+                }
+              >
+                {getRoleLabel(profile)}
               </Badge>
             </div>
           </CardHeader>

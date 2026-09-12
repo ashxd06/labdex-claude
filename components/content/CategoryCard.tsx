@@ -30,7 +30,9 @@ export function CategoryCard({
   name: string;
   description: string | null;
   icon: string | null;
-  count: number;
+  /** `null` significa que la consulta del conteo falló — nunca se usa `0`
+   * para representar un error (Fase 7, §2/§31). */
+  count: number | null;
 }) {
   const Icon = (icon && ICONS[icon]) || Tags;
 
@@ -45,7 +47,7 @@ export function CategoryCard({
       <h2 className="text-base font-semibold uppercase tracking-wide text-text">{name}</h2>
       {description && <p className="text-sm text-text-muted">{description}</p>}
       <p className="font-mono text-xs text-text-faint">
-        {count} {count === 1 ? "contenido" : "contenidos"}
+        {count === null ? "No se pudo cargar" : `${count} ${count === 1 ? "contenido" : "contenidos"}`}
       </p>
       <span className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-accent">
         Explorar <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />

@@ -30,3 +30,20 @@ export function isLabStaff(profile: Profile | null): boolean {
 export function isAuthenticated(user: { id: string } | null): boolean {
   return user !== null;
 }
+
+/**
+ * Etiqueta en español del rol real del usuario (Fase 7, §10/§4). El rol
+ * siempre viene de `profile.role` (fila `profiles`, RLS), nunca de algo que
+ * el frontend decida — esta función solo traduce ese valor a texto, no lo
+ * calcula ni lo modifica.
+ */
+export function getRoleLabel(profile: Profile | null): string {
+  switch (profile?.role) {
+    case "admin":
+      return "Administrador";
+    case "lab_staff":
+      return "Personal de laboratorio";
+    default:
+      return "Usuario";
+  }
+}

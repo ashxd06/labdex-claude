@@ -16,7 +16,12 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ModulePreviewCard } from "@/components/ModulePreviewCard";
 import { SearchBar } from "@/components/layout/SearchBar";
-import { countResourceRows } from "@/lib/content/queries";
+import {
+  countResourceRowsResult,
+  getCategoryContentCounts,
+  getCategoryIdsBySlug,
+} from "@/lib/content/queries";
+import { formatCountLabel } from "@/lib/content/countLabel";
 
 const CATEGORY_ICONS: Record<string, typeof Microscope> = {
   microbiologia: Microscope,
@@ -36,32 +41,103 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   citologia: "Estudio morfológico de células y tejidos.",
 };
 
+// Categorías sin tabla propia: su contenido son las filas de
+// laboratory_tests/procedures/clinical_analyses etiquetadas con su
+// category_id (igual que muestra /contenido/[category]). Microbiología es
+// la única con tabla propia (microorganisms).
+const OTHER_CATEGORY_SLUGS = [
+  "hematologia",
+  "bioquimica",
+  "parasitologia",
+  "inmunologia",
+  "citologia",
+] as const;
+
 export default async function HomePage() {
-  const [microorganismCount, mediaCount, testCount, procedureCount, analysisCount, documentCount] =
-    await Promise.all([
-      countResourceRows("microorganisms"),
-      countResourceRows("culture_media"),
-      countResourceRows("laboratory_tests"),
-      countResourceRows("procedures"),
-      countResourceRows("clinical_analyses"),
-      countResourceRows("documents"),
-    ]);
+  const [
+    microorganismCount,
+    mediaCount,
+    testCount,
+    procedureCount,
+    analysisCount,
+    documentCount,
+    categoryIdsResult,
+  ] = await Promise.all([
+    countResourceRowsResult("microorganisms"),
+    countResourceRowsResult("culture_media"),
+    countResourceRowsResult("laboratory_tests"),
+    countResourceRowsResult("procedures"),
+    countResourceRowsResult("clinical_analyses"),
+    countResourceRowsResult("documents"),
+    getCategoryIdsBySlug([...OTHER_CATEGORY_SLUGS]),
+  ]);
+
+  // Ahora que se conocen los category_id reales, se cuenta cuánto
+  // contenido (pruebas + procedimientos + análisis) tiene cada una. Si no
+  // se pudo resolver el id de una categoría (consulta a `categories`
+  // fallida, o la categoría todavía no existe en la tabla), se trata igual
+  // que un conteo fallido: nunca se asume "0" en silencio.
+  const knownCategoryIds = Object.values(categoryIdsResult.map);
+  const categoryCountsResult = await getCategoryContentCounts(knownCategoryIds);
+
+  function otherCategoryCount(slug: string): { count: number | null; error: string | null } {
+    if (categoryIdsResult.error) return { count: null, error: categoryIdsResult.error };
+    const categoryId = categoryIdsResult.map[slug];
+    // No se encontró un id para este slug en `categories` (seed no
+    // ejecutado todavía, o la categoría fue renombrada/eliminada). No es
+    // "categoría real sin contenido": es que la categoría no existe en la
+    // tabla. Se muestra 0 igualmente (no hay nada que contar), aunque el
+    // enlace de esa tarjeta llevaría a un 404 en /contenido/[slug] hasta
+    // que la categoría exista.
+    if (!categoryId) return { count: 0, error: null };
+    if (categoryCountsResult.error) return { count: null, error: categoryCountsResult.error };
+    return { count: categoryCountsResult.counts[categoryId] ?? 0, error: null };
+  }
 
   const contentModules = [
-    { slug: "microbiologia", href: "/contenido/microbiologia", count: microorganismCount },
-    { slug: "hematologia", href: "/contenido/hematologia", count: 0 },
-    { slug: "bioquimica", href: "/contenido/bioquimica", count: 0 },
-    { slug: "parasitologia", href: "/contenido/parasitologia", count: 0 },
-    { slug: "inmunologia", href: "/contenido/inmunologia", count: 0 },
-    { slug: "citologia", href: "/contenido/citologia", count: 0 },
+    {
+      slug: "microbiologia",
+      href: "/contenido/microbiologia",
+      countLabel: formatCountLabel(microorganismCount, { singular: "contenido", plural: "contenidos" }),
+    },
+    ...OTHER_CATEGORY_SLUGS.map((slug) => ({
+      slug,
+      href: `/contenido/${slug}`,
+      countLabel: formatCountLabel(otherCategoryCount(slug), { singular: "contenido", plural: "contenidos" }),
+    })),
   ];
 
   const resourceModules = [
-    { icon: FlaskConical, title: "Medios de cultivo", href: "/contenido/medios", count: mediaCount },
-    { icon: ClipboardCheck, title: "Pruebas", href: "/contenido/pruebas", count: testCount },
-    { icon: Workflow, title: "Procedimientos", href: "/contenido/procedimientos", count: procedureCount },
-    { icon: FileStack, title: "Análisis clínicos", href: "/contenido/analisis", count: analysisCount },
-    { icon: FileStack, title: "Documentos", href: "/contenido/documentos", count: documentCount },
+    {
+      icon: FlaskConical,
+      title: "Medios de cultivo",
+      href: "/contenido/medios",
+      countLabel: formatCountLabel(mediaCount, { singular: "registro", plural: "registros" }),
+    },
+    {
+      icon: ClipboardCheck,
+      title: "Pruebas",
+      href: "/contenido/pruebas",
+      countLabel: formatCountLabel(testCount, { singular: "registro", plural: "registros" }),
+    },
+    {
+      icon: Workflow,
+      title: "Procedimientos",
+      href: "/contenido/procedimientos",
+      countLabel: formatCountLabel(procedureCount, { singular: "registro", plural: "registros" }),
+    },
+    {
+      icon: FileStack,
+      title: "Análisis clínicos",
+      href: "/contenido/analisis",
+      countLabel: formatCountLabel(analysisCount, { singular: "registro", plural: "registros" }),
+    },
+    {
+      icon: FileStack,
+      title: "Documentos",
+      href: "/contenido/documentos",
+      countLabel: formatCountLabel(documentCount, { singular: "registro", plural: "registros" }),
+    },
   ];
 
   const workspaceModules = [
@@ -130,7 +206,7 @@ export default async function HomePage() {
                 description={CATEGORY_DESCRIPTIONS[module.slug]}
                 href={module.href}
                 available
-                countLabel={`${module.count} ${module.count === 1 ? "contenido" : "contenidos"}`}
+                countLabel={module.countLabel}
               />
             ))}
           </div>
@@ -147,7 +223,7 @@ export default async function HomePage() {
                 description=""
                 href={module.href}
                 available
-                countLabel={`${module.count} ${module.count === 1 ? "registro" : "registros"}`}
+                countLabel={module.countLabel}
               />
             ))}
           </div>

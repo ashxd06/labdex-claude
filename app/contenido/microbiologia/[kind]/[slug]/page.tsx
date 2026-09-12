@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Breadcrumbs } from "@/components/content/Breadcrumbs";
@@ -178,16 +177,6 @@ export default async function MicroorganismDetailPage({
             )}
           </div>
         )}
-
-        <div className="mt-10 flex items-center justify-between gap-3 rounded-lg border border-dashed border-border p-4">
-          <div className="flex items-center gap-2 text-sm text-text-muted">
-            <Sparkles className="size-4 text-accent" />
-            Consultar LABDEX AI sobre {item.scientific_name}
-          </div>
-          <span className="rounded-md bg-surface-2 px-2.5 py-1 text-xs text-text-faint">
-            Próximamente
-          </span>
-        </div>
       </main>
       <Footer />
     </div>

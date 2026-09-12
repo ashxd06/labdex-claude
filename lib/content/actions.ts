@@ -14,6 +14,44 @@ export interface CrudActionState {
   id?: string;
 }
 
+/**
+ * Rutas públicas reales que muestran datos de cada tabla de contenido
+ * (Fase 7, §5). Las páginas de detalle dinámicas bajo `/contenido`
+ * (`/contenido/pruebas/[slug]`, `/contenido/microbiologia/[kind]/[slug]`,
+ * etc.) ya tienen `export const revalidate = 0` — se renderizan sin caché
+ * en cada visita, así que no dependen de esta invalidación para mostrar
+ * datos actualizados. Lo que sí faltaba invalidar son los listados/índices
+ * públicos y el Home, que muestran conteos derivados de estas tablas
+ * (Fase 7, §1); esto se agrega aquí como capa de seguridad adicional en
+ * caso de que la estrategia de caché de esas páginas cambie más adelante.
+ */
+const PUBLIC_PATHS_BY_TABLE: Record<string, string[]> = {
+  microorganisms: ["/", "/contenido", "/contenido/microbiologia"],
+  categories: ["/", "/contenido"],
+  culture_media: ["/", "/contenido", "/contenido/medios"],
+  laboratory_tests: ["/", "/contenido", "/contenido/pruebas"],
+  procedures: ["/", "/contenido", "/contenido/procedimientos"],
+  clinical_analyses: ["/", "/contenido", "/contenido/analisis"],
+  documents: ["/", "/contenido", "/contenido/documentos"],
+};
+
+/**
+ * Estas tres tablas también aparecen en `/contenido/[category]`, filtradas
+ * por `category_id` (ver esa página). Se revalida con `"layout"` porque es
+ * una ruta dinámica: eso invalida todas las categorías, no solo una, sin
+ * necesitar el slug exacto aquí.
+ */
+const CATEGORY_DETAIL_TABLES = new Set(["laboratory_tests", "procedures", "clinical_analyses", "categories"]);
+
+function revalidatePublicPaths(table: string) {
+  for (const path of PUBLIC_PATHS_BY_TABLE[table] ?? []) {
+    revalidatePath(path);
+  }
+  if (CATEGORY_DETAIL_TABLES.has(table)) {
+    revalidatePath("/contenido/[category]", "layout");
+  }
+}
+
 async function client(): Promise<SupabaseClient> {
   return (await createTypedClient()) as unknown as SupabaseClient;
 }
@@ -93,6 +131,7 @@ export async function createRecord(
     }
 
     revalidatePath(config.adminPath);
+    revalidatePublicPaths(config.table);
     return {
       status: "success",
       message: `${config.labelSingular} creado correctamente.`,
@@ -140,6 +179,7 @@ export async function updateRecord(
     }
 
     revalidatePath(config.adminPath);
+    revalidatePublicPaths(config.table);
     return { status: "success", message: `${config.labelSingular} actualizado correctamente.` };
   } catch (err) {
     return { status: "error", message: err instanceof Error ? err.message : "Error inesperado." };
@@ -158,6 +198,7 @@ export async function deleteRecord(resourceKey: string, id: string): Promise<Cru
     }
 
     revalidatePath(config.adminPath);
+    revalidatePublicPaths(config.table);
     return { status: "success", message: `${config.labelSingular} eliminado.` };
   } catch (err) {
     return { status: "error", message: err instanceof Error ? err.message : "Error inesperado." };
@@ -184,6 +225,7 @@ export async function toggleActive(
     }
 
     revalidatePath(config.adminPath);
+    revalidatePublicPaths(config.table);
     return { status: "success" };
   } catch (err) {
     return { status: "error", message: err instanceof Error ? err.message : "Error inesperado." };
