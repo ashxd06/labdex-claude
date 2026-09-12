@@ -69,16 +69,25 @@ export default async function HomePage() {
       icon: ClipboardList,
       title: "Laboratorio",
       description: "Resultados clínicos, análisis, procedimientos y calculadoras.",
+      href: "/laboratorio",
+      available: true,
+      ctaLabel: "Abrir laboratorio →",
     },
     {
       icon: GraduationCap,
       title: "Estudio",
       description: "Material y herramientas de estudio para el equipo del laboratorio.",
+      href: "/estudio",
+      available: true,
+      ctaLabel: "Ir a estudiar →",
     },
     {
       icon: Sparkles,
       title: "LABDEX AI",
       description: "Asistente de laboratorio impulsado por Gemini.",
+      href: "/labdex-ai",
+      available: true,
+      ctaLabel: "Abrir LABDEX AI →",
     },
   ];
 

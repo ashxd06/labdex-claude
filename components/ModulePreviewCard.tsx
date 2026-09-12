@@ -9,6 +9,10 @@ interface ModulePreviewCardProps {
   available?: boolean;
   href?: string;
   countLabel?: string;
+  /** Texto del CTA cuando `available` es true. Por defecto "Explorar →"
+   * (igual que antes); las tarjetas de "Herramientas" en la portada pasan
+   * un texto más específico ("Abrir laboratorio", "Ir a estudiar", etc.). */
+  ctaLabel?: string;
 }
 
 export function ModulePreviewCard({
@@ -18,6 +22,7 @@ export function ModulePreviewCard({
   available = false,
   href,
   countLabel,
+  ctaLabel = "Explorar →",
 }: ModulePreviewCardProps) {
   const content = (
     <>
@@ -34,7 +39,7 @@ export function ModulePreviewCard({
       </div>
       {available && href && (
         <span className="mt-auto inline-flex items-center text-sm font-medium text-accent">
-          Explorar →
+          {ctaLabel}
         </span>
       )}
     </>
