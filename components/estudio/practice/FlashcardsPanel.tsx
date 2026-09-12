@@ -30,7 +30,7 @@ export function FlashcardsPanel({ materialId, onBack }: { materialId: string; on
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/estudio/materials/${materialId}/flashcards`);
+      const res = await fetch(`/api/estudio/materials/${materialId}/flashcards?order=priority`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "No se pudieron cargar las flashcards.");
       setCards(data.flashcards);
@@ -44,7 +44,7 @@ export function FlashcardsPanel({ materialId, onBack }: { materialId: string; on
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/estudio/materials/${materialId}/flashcards`);
+        const res = await fetch(`/api/estudio/materials/${materialId}/flashcards?order=priority`);
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) throw new Error(data?.error || "No se pudieron cargar las flashcards.");

@@ -9,7 +9,7 @@
 export type ExamDifficulty = "easy" | "normal" | "hard";
 export const EXAM_DIFFICULTIES: ExamDifficulty[] = ["easy", "normal", "hard"];
 
-export type AttemptMode = "practica" | "examen" | "repaso_errores";
+export type AttemptMode = "practica" | "examen" | "repaso_errores" | "inteligente";
 export type AttemptStatus = "en_progreso" | "finalizado";
 
 // --- Flashcards -----------------------------------------------------------
