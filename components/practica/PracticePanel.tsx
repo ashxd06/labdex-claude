@@ -5,6 +5,7 @@ import { RefreshCw, CheckCircle2, XCircle, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { generateExercise } from "@/lib/practica/generator";
+import { generateMolarityExercise } from "@/lib/practica/molarity";
 import type { PracticeCategory, PracticeDifficulty, PracticeExercise } from "@/lib/practica/types";
 
 function parseNumber(value: string): number | null {
@@ -12,6 +13,12 @@ function parseNumber(value: string): number | null {
   if (!normalized) return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function createExercise(category: PracticeCategory, difficulty: PracticeDifficulty): PracticeExercise {
+  return category === "molaridad"
+    ? generateMolarityExercise(Math.floor(Math.random() * 2 ** 31), difficulty)
+    : generateExercise(category, difficulty);
 }
 
 export function PracticePanel() {
@@ -25,7 +32,7 @@ export function PracticePanel() {
   function newExercise(nextCategory = category, nextDifficulty = difficulty) {
     setCategory(nextCategory);
     setDifficulty(nextDifficulty);
-    setExercise(generateExercise(nextCategory, nextDifficulty));
+    setExercise(createExercise(nextCategory, nextDifficulty));
     setAnswer("");
     setFeedback(null);
     setShowProcedure(false);
@@ -45,6 +52,7 @@ export function PracticePanel() {
           <select value={category} onChange={(event) => newExercise(event.target.value as PracticeCategory, difficulty)} className="rounded-md border border-border bg-surface px-3.5 py-2.5 text-text outline-none focus:border-primary">
             <option value="diluciones">Diluciones</option>
             <option value="concentraciones">Concentraciones</option>
+            <option value="molaridad">Molaridad y soluciones</option>
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-medium text-text-muted">
