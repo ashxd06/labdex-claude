@@ -1,6 +1,6 @@
 import type { PracticeCategory, PracticeDifficulty, PracticeExercise } from "./types";
 
-const pick = <T,>(items: T[], random: () => number): T => items[Math.floor(random() * items.length)];
+const pick = <T,>(items: readonly T[], random: () => number): T => items[Math.floor(random() * items.length)];
 
 function rng(seed: number): () => number {
   let state = seed >>> 0;
