@@ -4,6 +4,8 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Breadcrumbs } from "@/components/content/Breadcrumbs";
 import { ResourceDetailSections } from "@/components/content/ResourceDetailSections";
+import { EducationalImagePanel } from "@/components/content/EducationalImagePanel";
+import { getPublicUrl } from "@/lib/content/publicUrl";
 import { SampleDataBadge } from "@/components/content/SampleDataBadge";
 import { getResourceRowBySlug } from "@/lib/content/queries";
 import type { CultureMedia } from "@/lib/supabase/types";
@@ -39,6 +41,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const { slug } = await params;
   const item = await loadItem(slug);
   if (!item) notFound();
+  const educationalImageUrl = getPublicUrl("educational-images", item.educational_image_path);
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -61,6 +64,18 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         </div>
 
         {item.description && <p className="mt-4 text-text-muted">{item.description}</p>}
+        {educationalImageUrl && (
+          <div className="mt-6">
+            <EducationalImagePanel
+              src={educationalImageUrl}
+              title="Mira el aspecto del medio"
+              alt={item.educational_image_caption || `Imagen educativa de medio de cultivo: ${item.name}`}
+              caption={item.educational_image_caption}
+              observation={item.educational_image_observation}
+            />
+          </div>
+        )}
+
 
         <div className="mt-6">
           <ResourceDetailSections resourceKey="culture_media" record={item as unknown as Record<string, unknown>} />
