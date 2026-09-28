@@ -6,9 +6,13 @@ export function ServiceWorkerRegistration() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
-    window.addEventListener("load", () => {
-      void navigator.serviceWorker.register("/sw.js");
-    });
+    const register = () => void navigator.serviceWorker.register("/sw.js");
+
+    if (document.readyState === "complete") {
+      register();
+    } else {
+      window.addEventListener("load", register, { once: true });
+    }
   }, []);
 
   return null;
