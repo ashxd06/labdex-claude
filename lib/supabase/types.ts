@@ -70,6 +70,9 @@ export interface CultureMedia extends ContentFields {
   incubation: string | null;
   interpretation: string | null;
   quality_control: string | null;
+  educational_image_path: string | null;
+  educational_image_caption: string | null;
+  educational_image_observation: string | null;
   is_sample_data: boolean;
 }
 
@@ -85,6 +88,9 @@ export interface LaboratoryTest extends ContentFields {
   materials: string | null;
   procedure: string | null;
   interpretation: string | null;
+  educational_image_path: string | null;
+  educational_image_caption: string | null;
+  educational_image_observation: string | null;
   is_sample_data: boolean;
 }
 
@@ -101,6 +107,9 @@ export interface Procedure extends ContentFields {
   procedure: string | null;
   precautions: string | null;
   interpretation: string | null;
+  educational_image_path: string | null;
+  educational_image_caption: string | null;
+  educational_image_observation: string | null;
   is_sample_data: boolean;
 }
 
@@ -117,6 +126,9 @@ export interface ClinicalAnalysis extends ContentFields {
   reference_range: string | null;
   calculation: string | null;
   interpretation: string | null;
+  educational_image_path: string | null;
+  educational_image_caption: string | null;
+  educational_image_observation: string | null;
   is_sample_data: boolean;
 }
 

@@ -7,6 +7,7 @@ import { SimpleContentCard } from "@/components/content/SimpleContentCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { listResourceRowsPaged } from "@/lib/content/queries";
 import type { CultureMedia } from "@/lib/supabase/types";
+import { getPublicUrl } from "@/lib/content/publicUrl";
 
 export const revalidate = 0;
 const PAGE_SIZE = 12;
@@ -82,6 +83,7 @@ export default async function Page({
                   description={item.description}
                   uppercase={false}
                   sample={item.is_sample_data}
+                  image={getPublicUrl("educational-images", item.educational_image_path)}
                 />
               ))}
             </div>

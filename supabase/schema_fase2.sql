@@ -118,6 +118,9 @@ create table if not exists public.culture_media (
   incubation text,
   interpretation text,
   quality_control text,
+  educational_image_path text,
+  educational_image_caption text,
+  educational_image_observation text,
   is_sample_data boolean not null default false,
   is_active boolean not null default true,
   status public.content_status not null default 'published',
@@ -147,6 +150,9 @@ create table if not exists public.laboratory_tests (
   materials text,
   procedure text,
   interpretation text,
+  educational_image_path text,
+  educational_image_caption text,
+  educational_image_observation text,
   is_sample_data boolean not null default false,
   is_active boolean not null default true,
   status public.content_status not null default 'published',
@@ -177,6 +183,9 @@ create table if not exists public.procedures (
   procedure text,
   precautions text,
   interpretation text,
+  educational_image_path text,
+  educational_image_caption text,
+  educational_image_observation text,
   is_sample_data boolean not null default false,
   is_active boolean not null default true,
   status public.content_status not null default 'published',
@@ -207,6 +216,9 @@ create table if not exists public.clinical_analyses (
   reference_range text,
   calculation text,
   interpretation text,
+  educational_image_path text,
+  educational_image_caption text,
+  educational_image_observation text,
   is_sample_data boolean not null default false,
   is_active boolean not null default true,
   status public.content_status not null default 'published',
@@ -493,3 +505,33 @@ create policy "documents_bucket_admin_delete"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'documents' and public.is_admin((select auth.uid())));
+-- Bucket público para imágenes educativas del contenido (medio, prueba,
+-- procedimiento y análisis). Solo administradores pueden subir o borrar.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('educational-images', 'educational-images', true, 5242880, array['image/png', 'image/jpeg', 'image/webp'])
+on conflict (id) do nothing;
+
+drop policy if exists "educational_images_public_read" on storage.objects;
+create policy "educational_images_public_read"
+  on storage.objects for select
+  to anon, authenticated
+  using (bucket_id = 'educational-images');
+
+drop policy if exists "educational_images_admin_insert" on storage.objects;
+create policy "educational_images_admin_insert"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'educational-images' and public.is_admin((select auth.uid())));
+
+drop policy if exists "educational_images_admin_update" on storage.objects;
+create policy "educational_images_admin_update"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'educational-images' and public.is_admin((select auth.uid())))
+  with check (bucket_id = 'educational-images' and public.is_admin((select auth.uid())));
+
+drop policy if exists "educational_images_admin_delete" on storage.objects;
+create policy "educational_images_admin_delete"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'educational-images' and public.is_admin((select auth.uid())));

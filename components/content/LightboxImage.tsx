@@ -8,10 +8,12 @@ export function LightboxImage({
   src,
   alt,
   caption,
+  fit = "cover",
 }: {
   src: string;
   alt: string;
   caption?: string;
+  fit?: "cover" | "contain";
 }) {
   const [open, setOpen] = useState(false);
 
@@ -30,7 +32,7 @@ export function LightboxImage({
             width={600}
             height={400}
             unoptimized
-            className="h-56 w-full object-cover transition-transform duration-200 ease-out hover:scale-105"
+            className={`h-56 w-full transition-transform duration-200 ease-out hover:scale-105 ${fit === "contain" ? "bg-surface-2 object-contain" : "object-cover"}`}
           />
         </button>
         {caption && (

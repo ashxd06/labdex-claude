@@ -4,6 +4,8 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Breadcrumbs } from "@/components/content/Breadcrumbs";
 import { ResourceDetailSections } from "@/components/content/ResourceDetailSections";
+import { EducationalImagePanel } from "@/components/content/EducationalImagePanel";
+import { getPublicUrl } from "@/lib/content/publicUrl";
 import { SampleDataBadge } from "@/components/content/SampleDataBadge";
 import { AskLabdexAiButton } from "@/components/labdex-ai/AskLabdexAiButton";
 import { getResourceRowBySlug } from "@/lib/content/queries";
@@ -40,6 +42,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const { slug } = await params;
   const item = await loadItem(slug);
   if (!item) notFound();
+  const educationalImageUrl = getPublicUrl("educational-images", item.educational_image_path);
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -66,6 +69,18 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         </div>
 
         {item.description && <p className="mt-4 text-text-muted">{item.description}</p>}
+        {educationalImageUrl && (
+          <div className="mt-6">
+            <EducationalImagePanel
+              src={educationalImageUrl}
+              title="Observa los pasos clave"
+              alt={item.educational_image_caption || `Imagen educativa de procedimiento: ${item.name}`}
+              caption={item.educational_image_caption}
+              observation={item.educational_image_observation}
+            />
+          </div>
+        )}
+
 
         <div className="mt-6">
           <ResourceDetailSections resourceKey="procedures" record={item as unknown as Record<string, unknown>} />
