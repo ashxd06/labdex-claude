@@ -8,7 +8,7 @@ import { logoutAction } from "@/app/actions/auth";
 import { LoadingInline } from "@/components/ui/Loading";
 import { Button } from "@/components/ui/Button";
 
-export function UserMenu() {
+export function UserMenu({ mobile = false }: { mobile?: boolean }) {
   const { user, profile, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -28,6 +28,19 @@ export function UserMenu() {
   }
 
   if (!user) {
+    if (mobile) {
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          <Link href="/login">
+            <Button variant="secondary" size="sm" fullWidth>Iniciar sesión</Button>
+          </Link>
+          <Link href="/registro">
+            <Button size="sm" fullWidth>Crear cuenta</Button>
+          </Link>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center gap-2">
         <Link href="/login">
@@ -46,6 +59,37 @@ export function UserMenu() {
 
   const displayName = profile?.full_name || user.email || "Usuario";
   const initial = displayName.charAt(0).toUpperCase();
+
+  if (mobile) {
+    return (
+      <section className="overflow-hidden rounded-md border border-border bg-surface" aria-label="Cuenta">
+        <div className="flex items-center gap-3 border-b border-border px-3 py-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary">
+            {initial}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-text">{displayName}</p>
+            <p className="truncate text-xs text-text-faint">{user.email}</p>
+          </div>
+        </div>
+        <div className="flex flex-col">
+          <AccountLink href="/perfil" icon={User} label="Mi perfil" />
+          {profile?.role === "admin" && (
+            <AccountLink href="/admin" icon={ShieldCheck} label="Panel de administración" />
+          )}
+          <AccountLink href="/estudio" icon={LayoutGrid} label="Mi espacio de estudio" />
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="flex min-h-11 w-full items-center gap-2 border-t border-border px-3 text-left text-sm text-danger transition-colors hover:bg-danger-soft"
+            >
+              <LogOut className="size-4" aria-hidden="true" /> Cerrar sesión
+            </button>
+          </form>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="relative" ref={menuRef}>
@@ -109,5 +153,24 @@ export function UserMenu() {
         </div>
       )}
     </div>
+  );
+}
+
+function AccountLink({
+  href,
+  icon: Icon,
+  label,
+}: {
+  href: string;
+  icon: typeof User;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-11 items-center gap-2 px-3 text-sm text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+    >
+      <Icon className="size-4" aria-hidden="true" /> {label}
+    </Link>
   );
 }
