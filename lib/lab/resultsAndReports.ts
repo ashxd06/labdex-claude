@@ -179,6 +179,19 @@ export async function createReport(orderId: string, patientId: string): Promise<
       .single();
 
     if (error) {
+      // La restricción UNIQUE(order_id) es la garantía definitiva frente a
+      // dos solicitudes simultáneas. Si otro proceso insertó primero, se
+      // recupera el informe ya creado en vez de mostrar un error al usuario.
+      if (error.code === "23505") {
+        const { data: concurrentReport } = await supabase
+          .from("lab_reports")
+          .select("id")
+          .eq("order_id", orderId)
+          .maybeSingle();
+        if (concurrentReport) {
+          return { status: "success", id: concurrentReport.id, message: "El informe ya estaba generado." };
+        }
+      }
       return { status: "error", message: GENERIC_ERROR };
     }
 
