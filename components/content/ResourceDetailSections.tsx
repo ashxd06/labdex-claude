@@ -1,6 +1,15 @@
 import { getResourceConfig } from "@/lib/content/resourceConfigs";
 
-const HIDDEN_KEYS = new Set(["is_active", "status", "created_by", "updated_by", "created_at", "updated_at"]);
+const HIDDEN_KEYS = new Set([
+  "is_active",
+  "status",
+  "created_by",
+  "updated_by",
+  "created_at",
+  "updated_at",
+  "educational_image_caption",
+  "educational_image_observation",
+]);
 
 export function ResourceDetailSections({
   resourceKey,
