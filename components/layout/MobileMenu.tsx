@@ -25,7 +25,7 @@ export function MobileMenu({
   return (
     <div id="mobile-navigation" className="fixed inset-0 z-50 md:hidden">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="absolute inset-y-0 right-0 flex w-full max-w-xs flex-col gap-6 border-l border-border-strong bg-[#0e131b] px-5 py-5 shadow-2xl">
+      <div className="absolute inset-y-0 right-0 flex w-full max-w-xs flex-col gap-5 overflow-y-auto overscroll-contain border-l border-border-strong bg-[#0e131b] px-5 py-5 shadow-2xl">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-text-muted">Menú</span>
           <button
@@ -37,11 +37,9 @@ export function MobileMenu({
           </button>
         </div>
         <SearchBar compact />
-        <div className="flex flex-col gap-1">
+        <UserMenu mobile />
+        <div className="border-t border-border pt-4">
           <Navigation onNavigate={onClose} orientation="vertical" />
-        </div>
-        <div className="mt-auto border-t border-border pt-5">
-          <UserMenu />
         </div>
       </div>
     </div>
