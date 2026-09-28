@@ -23,7 +23,7 @@ export function MobileMenu({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 md:hidden">
+    <div id="mobile-navigation" className="fixed inset-0 z-40 md:hidden">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="absolute inset-y-0 right-0 flex w-full max-w-xs flex-col gap-6 border-l border-border bg-bg-raised px-5 py-5">
         <div className="flex items-center justify-between">
