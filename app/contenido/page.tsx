@@ -25,9 +25,12 @@ export default async function ContenidoPage() {
   // categorías muestran su contenido real vía laboratory_tests/procedures/
   // clinical_analyses filtrados por category_id (Fase 7, §1) — las mismas
   // tres tablas que ya lista /contenido/[categoria] al entrar a cada una.
-  const nonMicrobiologiaIds = categories
-    .filter((c) => c.type !== "microbiologia")
-    .map((c) => c.id);
+  // Microbiología tiene ruta y tabla propias: mantener su acceso visible
+  // aunque todavía no exista una fila de categoría activa en Supabase.
+  const otherCategories = categories.filter(
+    (category) => category.type !== "microbiologia" && category.slug !== "microbiologia"
+  );
+  const nonMicrobiologiaIds = otherCategories.map((category) => category.id);
   const categoryCountsResult = await getCategoryContentCounts(nonMicrobiologiaIds);
 
   return (
@@ -41,7 +44,19 @@ export default async function ContenidoPage() {
         </p>
 
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category) => {
+          <CategoryCard
+            key="microbiologia"
+            slug="microbiologia"
+            name="Microbiología"
+            description="Bacterias, hongos, virus y parásitos de importancia clínica."
+            icon="microscope"
+            count={
+              microorganismCountResult.error === null
+                ? microorganismCountResult.count
+                : null
+            }
+          />
+          {otherCategories.map((category) => {
             const isMicrobiologia = category.type === "microbiologia";
             const count = isMicrobiologia
               ? microorganismCountResult.error === null
@@ -64,10 +79,9 @@ export default async function ContenidoPage() {
           })}
         </div>
 
-        {categories.length === 0 && (
+        {otherCategories.length === 0 && (
           <p className="mt-8 text-sm text-text-faint">
-            Todavía no hay categorías activas. Un administrador puede crearlas desde{" "}
-            <span className="font-mono">/admin/categorias</span>.
+            Por ahora puedes explorar Microbiología. Pronto se agregarán más categorías.
           </p>
         )}
       </main>
