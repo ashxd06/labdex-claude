@@ -5,13 +5,10 @@ import {
   BrainCircuit,
   Calculator,
   ClipboardCheck,
-  ClipboardList,
   Droplets,
   FileStack,
   FlaskConical,
-  GraduationCap,
   Microscope,
-  Sparkles,
   Target,
   Workflow,
 } from "lucide-react";
@@ -41,14 +38,14 @@ const CATEGORY_DESCRIPTIONS: Record<keyof typeof CATEGORY_ICONS, string> = {
 const FEATURED_CATEGORY_SLUGS = ["microbiologia", "hematologia", "bioquimica"] as const;
 
 export default async function HomePage() {
-  const [microorganismCount, mediaCount, testCount, procedureCount, analysisCount, documentCount, categoryIdsResult] = await Promise.all([
+  const [mediaCount, testCount, procedureCount, analysisCount, documentCount, categoryIdsResult] = await Promise.all([
     countResourceRowsResult("microorganisms"),
     countResourceRowsResult("culture_media"),
     countResourceRowsResult("laboratory_tests"),
     countResourceRowsResult("procedures"),
     countResourceRowsResult("clinical_analyses"),
     countResourceRowsResult("documents"),
-    getCategoryIdsBySlug(FEATURED_CATEGORY_SLUGS),
+    getCategoryIdsBySlug([...FEATURED_CATEGORY_SLUGS]),
   ]);
   const knownCategoryIds = Object.values(categoryIdsResult.map);
   const categoryCountsResult = await getCategoryContentCounts(knownCategoryIds);
