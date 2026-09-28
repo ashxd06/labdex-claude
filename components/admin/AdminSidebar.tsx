@@ -36,34 +36,53 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-border px-3 py-6 md:block">
-      <p className="px-3 text-xs font-medium uppercase tracking-wide text-text-faint">
-        Contenido
-      </p>
-      <nav className="mt-2 flex flex-col gap-0.5">
-        {SECTIONS.map((item) => (
-          <SidebarItem
-            key={item.label}
-            {...item}
-            active={item.href === "/admin" ? pathname === "/admin" : pathname?.startsWith(item.href)}
-          />
-        ))}
-      </nav>
+    <>
+      <aside className="hidden w-60 shrink-0 border-r border-border px-3 py-6 md:block">
+        <p className="px-3 text-xs font-medium uppercase tracking-wide text-text-faint">
+          Contenido
+        </p>
+        <nav className="mt-2 flex flex-col gap-0.5" aria-label="Contenido administrativo">
+          {SECTIONS.map((item) => (
+            <SidebarItem
+              key={item.label}
+              {...item}
+              active={isActive(pathname, item.href)}
+            />
+          ))}
+        </nav>
 
-      <p className="mt-6 px-3 text-xs font-medium uppercase tracking-wide text-text-faint">
-        Sistema
-      </p>
-      <nav className="mt-2 flex flex-col gap-0.5">
-        {SYSTEM.map((item) => (
-          <SidebarItem
-            key={item.label}
-            {...item}
-            active={item.href ? pathname?.startsWith(item.href) : undefined}
-          />
+        <p className="mt-6 px-3 text-xs font-medium uppercase tracking-wide text-text-faint">
+          Sistema
+        </p>
+        <nav className="mt-2 flex flex-col gap-0.5" aria-label="Sistema administrativo">
+          {SYSTEM.map((item) => (
+            <SidebarItem
+              key={item.label}
+              {...item}
+              active={isActive(pathname, item.href)}
+            />
+          ))}
+        </nav>
+      </aside>
+
+      <nav
+        className="flex w-full gap-2 overflow-x-auto border-b border-border bg-bg-raised px-4 py-3 md:hidden"
+        aria-label="Administración"
+      >
+        {SECTIONS.filter((item) => item.href).map((item) => (
+          <MobileAdminItem key={item.label} {...item} active={isActive(pathname, item.href)} />
+        ))}
+        {SYSTEM.filter((item) => item.href).map((item) => (
+          <MobileAdminItem key={item.label} {...item} active={isActive(pathname, item.href)} />
         ))}
       </nav>
-    </aside>
+    </>
   );
+}
+
+function isActive(pathname: string | null, href: string | null) {
+  if (!href) return false;
+  return href === "/admin" ? pathname === "/admin" : pathname?.startsWith(href);
 }
 
 function SidebarItem({
@@ -93,10 +112,37 @@ function SidebarItem({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors
         ${active ? "bg-surface-2 text-text" : "text-text-muted hover:bg-surface-2 hover:text-text"}`}
     >
       <Icon className="size-4" />
+      {label}
+    </Link>
+  );
+}
+
+function MobileAdminItem({
+  icon: Icon,
+  label,
+  href,
+  active,
+}: {
+  icon: typeof LayoutDashboard;
+  label: string;
+  href: string | null;
+  active?: boolean;
+}) {
+  if (!href) return null;
+
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors
+        ${active ? "border-primary bg-primary text-white" : "border-border bg-surface text-text-muted hover:border-accent hover:text-text"}`}
+    >
+      <Icon className="size-4" aria-hidden="true" />
       {label}
     </Link>
   );
