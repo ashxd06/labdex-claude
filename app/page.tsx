@@ -61,7 +61,10 @@ export default async function HomePage() {
   const contentModules = FEATURED_CATEGORY_SLUGS.map((slug) => ({
     slug,
     href: `/contenido/${slug}`,
-    countLabel: formatCountLabel(categoryCount(slug), { singular: "contenido", plural: "contenidos" }),
+    countLabel: formatCountLabel(
+      slug === "microbiologia" ? microorganismCount : categoryCount(slug),
+      { singular: "contenido", plural: "contenidos" }
+    ),
   }));
 
   const resourceModules = [
@@ -180,3 +183,4 @@ export default async function HomePage() {
     </div>
   );
 }
+
