@@ -94,7 +94,7 @@ export async function uploadResourceFile(
         .eq("resource_key", resourceKey).eq("record_id", id).maybeSingle();
       const payload = { ...((existing?.payload ?? {}) as Record<string, unknown>), [fieldKey]: path };
       const result = await supabase.from("content_drafts").upsert({
-        resource_key: resourceKey, record_id: id, payload, updated_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+        resource_key: resourceKey, record_id: id, payload, updated_by: (await supabase.auth.getUser()).data.user?.id ?? null, updated_at: new Date().toISOString(),
       }, { onConflict: "resource_key,record_id" });
       updateError = result.error;
     } else {
@@ -135,7 +135,7 @@ export async function deleteResourceFile(
         .eq("resource_key", resourceKey).eq("record_id", id).maybeSingle();
       const payload = { ...((existing?.payload ?? {}) as Record<string, unknown>), [fieldKey]: null };
       const result = await supabase.from("content_drafts").upsert({
-        resource_key: resourceKey, record_id: id, payload, updated_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+        resource_key: resourceKey, record_id: id, payload, updated_by: (await supabase.auth.getUser()).data.user?.id ?? null, updated_at: new Date().toISOString(),
       }, { onConflict: "resource_key,record_id" });
       error = result.error;
     } else {

@@ -189,6 +189,7 @@ export async function updateRecord(
         record_id: id,
         payload: { ...stagedPayload, ...safePayload },
         updated_by: userData.user?.id ?? null,
+        updated_at: new Date().toISOString(),
       }, { onConflict: "resource_key,record_id" });
       if (error) return { status: "error", message: "No se pudo guardar el borrador de cambios." };
       revalidatePath(config.adminPath);
