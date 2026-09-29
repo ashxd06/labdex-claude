@@ -70,7 +70,7 @@ export function OrderActions({
             <XCircle className="size-4" /> Cancelar
           </Button>
         )}
-        {!hasReport && (
+        {!hasReport && status !== "cancelada" && (
           <Button size="sm" onClick={handleGenerateReport} loading={pending}>
             <FileStack className="size-4" /> Generar informe
           </Button>
