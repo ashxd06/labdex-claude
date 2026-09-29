@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { labClient } from "@/lib/lab/shared";
 import { getSession } from "@/lib/auth/getSession";
 import { isAdmin, isLabStaff } from "@/lib/permissions";
-import { orderStatusAfterFirstResult, sampleStatusWhenOrderStarts, evaluateReportIssuance } from "@/lib/lab/workflow";
+import { orderStatusAfterFirstResult, sampleStatusWhenOrderStarts, evaluateReportIssuance, canEditOrderResults, computeResultFlag } from "@/lib/lab/workflow";
 import type { SampleStatus } from "@/lib/supabase/labTypes";
 import type { LabActionState } from "@/lib/lab/actions";
 
@@ -26,19 +26,6 @@ async function assertAdmin() {
 // Resultados
 // ---------------------------------------------------------------------------
 
-/**
- * Calcula un indicador visual (bajo/normal/alto) SOLO cuando el resultado es
- * numérico y existe un rango de referencia numérico estructurado. Nunca
- * inventa un rango: si no hay `rangeMin`/`rangeMax`, no se muestra bandera.
- */
-function computeFlag(resultValue: string, rangeMin?: number | null, rangeMax?: number | null) {
-  const numeric = Number.parseFloat(resultValue);
-  if (Number.isNaN(numeric) || rangeMin == null || rangeMax == null) return null;
-  if (numeric < rangeMin) return "bajo";
-  if (numeric > rangeMax) return "alto";
-  return "normal";
-}
-
 export async function saveResult(
   orderId: string,
   orderItemId: string,
@@ -48,6 +35,14 @@ export async function saveResult(
   try {
     const user = await assertLabStaff();
     const supabase = await labClient();
+    const { data: order } = await supabase.from("lab_orders").select("id, status, sample_id").eq("id", orderId).maybeSingle();
+    if (!order) return { status: "error", message: "La solicitud no existe." };
+    const { data: report } = await supabase.from("lab_reports").select("status").eq("order_id", orderId).maybeSingle();
+    if (!canEditOrderResults(order.status, report?.status)) {
+      return { status: "error", message: "La solicitud o el informe ya está cerrado; no se pueden cambiar resultados." };
+    }
+    const { data: orderItem } = await supabase.from("lab_order_items").select("id").eq("id", orderItemId).eq("order_id", orderId).maybeSingle();
+    if (!orderItem) return { status: "error", message: "El análisis no pertenece a esta solicitud." };
 
     const resultValue = String(formData.get("result_value") || "").trim();
     const unit = String(formData.get("unit") || "").trim() || null;
@@ -55,21 +50,36 @@ export async function saveResult(
     const observation = String(formData.get("observation") || "").trim() || null;
     const rangeMinRaw = formData.get("range_min");
     const rangeMaxRaw = formData.get("range_max");
-    const rangeMin = rangeMinRaw ? Number.parseFloat(String(rangeMinRaw)) : null;
-    const rangeMax = rangeMaxRaw ? Number.parseFloat(String(rangeMaxRaw)) : null;
+    const rangeMinText = String(rangeMinRaw ?? "").trim();
+    const rangeMaxText = String(rangeMaxRaw ?? "").trim();
+    const rangeMin = rangeMinText === "" ? null : Number(rangeMinText);
+    const rangeMax = rangeMaxText === "" ? null : Number(rangeMaxText);
+
+    if ((rangeMin === null) !== (rangeMax === null)) {
+      return { status: "error", message: "Ingresa ambos límites de referencia o deja ambos vacíos." };
+    }
+    if ((rangeMin !== null && !Number.isFinite(rangeMin)) || (rangeMax !== null && !Number.isFinite(rangeMax))) {
+      return { status: "error", message: "Los límites de referencia deben ser números válidos." };
+    }
+    if (rangeMin !== null && rangeMax !== null && rangeMin > rangeMax) {
+      return { status: "error", message: "El límite mínimo no puede ser mayor que el máximo." };
+    }
 
     if (!resultValue) {
       return { status: "error", message: "Ingresa un resultado." };
     }
 
-    const flag = computeFlag(resultValue, rangeMin, rangeMax);
+    const flag = computeResultFlag(resultValue, rangeMin, rangeMax);
+    const savedReferenceRange = referenceRangeText ?? (rangeMin !== null && rangeMax !== null
+      ? `${rangeMin}-${rangeMax}${unit ? ` ${unit}` : ""}`
+      : null);
 
     const { error } = await supabase
       .from("lab_results")
       .update({
         result_value: resultValue,
         unit,
-        reference_range_text: referenceRangeText,
+        reference_range_text: savedReferenceRange,
         observation,
         flag,
         status: "ingresado",
@@ -84,12 +94,6 @@ export async function saveResult(
     // Primer resultado ingresado de la solicitud: "pendiente" -> "en_proceso"
     // (Fase 4, §5). Ya no hace falta que alguien recuerde mover la
     // solicitud a mano; y la muestra vinculada avanza con ella.
-    const { data: order } = await supabase
-      .from("lab_orders")
-      .select("id, status, sample_id")
-      .eq("id", orderId)
-      .maybeSingle();
-
     if (order) {
       const nextOrderStatus = orderStatusAfterFirstResult(order.status);
       if (nextOrderStatus !== order.status) {
@@ -126,6 +130,17 @@ export async function validateResult(orderId: string, orderItemId: string): Prom
   try {
     const user = await assertLabStaff();
     const supabase = await labClient();
+    const { data: order } = await supabase.from("lab_orders").select("status").eq("id", orderId).maybeSingle();
+    const { data: report } = await supabase.from("lab_reports").select("status").eq("order_id", orderId).maybeSingle();
+    if (!order || !canEditOrderResults(order.status, report?.status)) {
+      return { status: "error", message: "La solicitud o el informe ya está cerrado; no se pueden validar resultados." };
+    }
+    const { data: item } = await supabase.from("lab_order_items").select("id").eq("id", orderItemId).eq("order_id", orderId).maybeSingle();
+    if (!item) return { status: "error", message: "El análisis no pertenece a esta solicitud." };
+    const { data: currentResult } = await supabase.from("lab_results").select("result_value, status").eq("order_item_id", orderItemId).maybeSingle();
+    if (!currentResult?.result_value || currentResult.status !== "ingresado") {
+      return { status: "error", message: "Guarda un resultado antes de validarlo." };
+    }
     const { error } = await supabase
       .from("lab_results")
       .update({ status: "validado", updated_by: user.id })
@@ -146,6 +161,10 @@ export async function createReport(orderId: string, patientId: string): Promise<
   try {
     const user = await assertLabStaff();
     const supabase = await labClient();
+    const { data: order } = await supabase.from("lab_orders").select("id, status, patient_id").eq("id", orderId).maybeSingle();
+    if (!order || order.status !== "completada" || order.patient_id !== patientId) {
+      return { status: "error", message: "Solo se puede generar un informe para una solicitud completada y su paciente asociado." };
+    }
 
     const { data: existing } = await supabase
       .from("lab_reports")
