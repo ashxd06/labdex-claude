@@ -122,6 +122,7 @@ export function LabReportPDF({
   sealUrl,
 }: LabReportPdfProps) {
   const isIssued = report.status === "emitido";
+  const isVoided = report.status === "anulado";
   const displayDate = report.issued_at ?? report.created_at;
   const age = calculateAge(patient.birth_date);
   const sexLabel = patient.sex ? SEX_LABELS[patient.sex] : null;
@@ -146,16 +147,16 @@ export function LabReportPDF({
             <Text style={styles.reportTitle}>INFORME DE RESULTADOS</Text>
             <Text style={styles.reportMeta}>N.º {report.report_number}</Text>
             <Text style={styles.reportMeta}>
-              {isIssued ? "Emitido" : "Fecha"}: {new Date(displayDate).toLocaleDateString("es")}
+              {isIssued ? "Emitido" : "Creado"}: {new Date(displayDate).toLocaleDateString("es")}
             </Text>
           </View>
         </View>
 
-        {!isIssued && (
-          <Text style={styles.draftBanner}>
-            BORRADOR — Documento no válido como informe oficial hasta su emisión
-          </Text>
-        )}
+        {isVoided ? (
+          <Text style={styles.draftBanner}>ANULADO — Documento no válido</Text>
+        ) : !isIssued ? (
+          <Text style={styles.draftBanner}>BORRADOR — Documento no válido como informe oficial hasta su emisión</Text>
+        ) : null}
 
         <Text style={styles.sectionTitle}>DATOS DEL PACIENTE</Text>
         <View style={styles.row}>
