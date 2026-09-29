@@ -25,6 +25,7 @@ const MICROORGANISM_ROW = {
   clinical_importance: null,
   diagnosis: null,
   is_active: true,
+  status: "published",
 };
 
 describe("retrieveContext", () => {
