@@ -16,6 +16,7 @@ export interface LearningCard {
   explanation: string;
   href: string;
   casePrompt?: string;
+  caseAnswer?: string;
 }
 
 type Resource = {
@@ -93,7 +94,10 @@ function makeCards(key: keyof typeof FIELD_QUESTIONS, topic: string, rows: Resou
         explanation: row.description?.trim() || `Respuesta tomada de la ficha publicada de ${row.name}.`,
         href: `/contenido/${slugPath}`,
         ...(key === "microorganisms" && row.morphology && row.gram_stain
-          ? { casePrompt: `Caso educativo: en una práctica observas un microorganismo descrito como «${String(row.gram_stain)}» y con esta morfología: «${String(row.morphology)}». ¿Qué ficha de LABDEX consultarías para estudiar estos hallazgos?` }
+          ? {
+              casePrompt: `Caso educativo: en una práctica observas un microorganismo descrito como «${String(row.gram_stain)}» y con esta morfología: «${String(row.morphology)}». ¿Qué ficha de LABDEX consultarías para estudiar estos hallazgos?`,
+              caseAnswer: `${row.name}. Revisa la tinción de Gram y morfología completas en su ficha; estos datos orientan el estudio académico, no establecen un diagnóstico.`,
+            }
           : {}),
       }];
     })
