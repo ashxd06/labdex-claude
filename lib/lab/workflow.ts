@@ -142,3 +142,19 @@ export function evaluateReportIssuance(orderStatus: OrderStatus): ReportIssuance
   }
   return { canIssue: true, reason: null };
 }
+
+
+/** Permite cambios de resultados solo mientras la solicitud y su informe sigan editables. */
+export function canEditOrderResults(orderStatus: string, reportStatus?: string | null): boolean {
+  return orderStatus !== "completada" && orderStatus !== "cancelada" && reportStatus !== "emitido" && reportStatus !== "anulado";
+}
+
+/** Interpreta únicamente números completos y rangos explícitos, sin inferir desde texto libre. */
+export function computeResultFlag(resultValue: string, rangeMin: number | null, rangeMax: number | null): "bajo" | "normal" | "alto" | null {
+  const normalized = resultValue.trim();
+  if (!normalized || !Number.isFinite(Number(normalized)) || rangeMin === null || rangeMax === null) return null;
+  const numeric = Number(normalized);
+  if (numeric < rangeMin) return "bajo";
+  if (numeric > rangeMax) return "alto";
+  return "normal";
+}
