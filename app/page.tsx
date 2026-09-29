@@ -90,8 +90,8 @@ export default async function HomePage() {
                 <Link href="/practica" className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">
                   Practicar ahora <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
-                <Link href="/contenido/bioquimica" className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-surface px-5 py-3 text-sm font-semibold text-text transition-colors hover:border-accent">
-                  Explorar Bioquímica <BookOpen className="size-4" aria-hidden="true" />
+                <Link href="/contenido" className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-surface px-5 py-3 text-sm font-semibold text-text transition-colors hover:border-accent">
+                  Explorar contenido <BookOpen className="size-4" aria-hidden="true" />
                 </Link>
               </div>
               <div className="mt-8 max-w-xl"><SearchBar compact /></div>
@@ -117,9 +117,9 @@ export default async function HomePage() {
           <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-baseline">
             <div>
               <p className="font-mono text-xs tracking-wide text-accent">RUTA RECOMENDADA</p>
-              <h2 className="mt-1 text-xl font-semibold text-text">Domina los fundamentos de Bioquímica</h2>
+              <h2 className="mt-1 text-xl font-semibold text-text">Empieza por Microbiología</h2>
             </div>
-            <Link href="/contenido/bioquimica" className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">Ver ruta <ArrowRight className="size-4" aria-hidden="true" /></Link>
+            <Link href="/contenido/microbiologia" className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">Explorar tema <ArrowRight className="size-4" aria-hidden="true" /></Link>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             {[
