@@ -208,6 +208,22 @@ export async function countResourceRowsResult(table: string, publicOnly = false)
   return { count: count ?? 0, error: null };
 }
 
+export async function countResourceRowsByStatus(
+  table: string,
+  status: string,
+  activeOnly = false
+): Promise<CountResult> {
+  const supabase = await createClient();
+  let query = supabase.from(table).select("*", { count: "exact", head: true }).eq("status", status);
+  if (activeOnly) query = query.eq("is_active", true);
+  const { count, error } = await query;
+  if (error) {
+    console.error(`[countResourceRowsByStatus:${table}:${status}]`, error.message);
+    return { count: null, error: error.message };
+  }
+  return { count: count ?? 0, error: null };
+}
+
 export interface ContentReviewItem {
   id: string;
   resourceKey: string;
@@ -406,4 +422,3 @@ export async function getCategoryIdsBySlug(
   }
   return { map, error: null };
 }
-

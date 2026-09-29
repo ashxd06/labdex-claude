@@ -25,7 +25,7 @@ export function MobileMenu({
   return (
     <div id="mobile-navigation" className="fixed inset-0 z-50 md:hidden">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="absolute inset-y-0 right-0 flex w-full max-w-xs flex-col gap-5 overflow-y-auto overscroll-contain border-l border-border-strong bg-[#0e131b] px-5 py-5 shadow-2xl">
+      <div className="absolute inset-y-0 right-0 flex w-full max-w-xs flex-col gap-5 overflow-y-auto overscroll-contain border-l border-border-strong bg-surface px-5 py-5 shadow-2xl">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-text-muted">Menú</span>
           <button

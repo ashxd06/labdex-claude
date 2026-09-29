@@ -67,8 +67,8 @@ export default async function Page({
           <div className="mt-8">
             <EmptyState
               icon={FlaskConical}
-              title="No hay registros todavía."
-              description="El administrador puede agregar contenido desde el panel de administración."
+              title={q ? `No encontramos resultados para «${q}».` : "Estamos preparando fichas de medios de cultivo."}
+              description={q ? "Prueba con otro término o explora todos los medios disponibles." : "Pronto habrá más recursos para consultar. Mientras tanto, revisa otras áreas de LABDEX."}
             />
           </div>
         ) : (

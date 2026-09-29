@@ -49,4 +49,3 @@ create policy "content_drafts_admin_all"
   to authenticated
   using (public.is_admin((select auth.uid())))
   with check (public.is_admin((select auth.uid())));
-

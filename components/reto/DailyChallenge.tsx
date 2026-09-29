@@ -154,4 +154,3 @@ function QuestionCard({ card, revealed, setRevealed, onRate, mode }: { card: Lea
 }
 function Stat({ label, value }: { label: string; value: number }) { return <div className="rounded-2xl border border-border bg-surface p-5"><p className="text-sm text-text-muted">{label}</p><p className="mt-2 text-3xl font-semibold">{value}</p></div>; }
 function Empty({ text }: { text: string }) { return <div className="rounded-2xl border border-border bg-surface p-6 text-sm text-text-muted"><RotateCcw className="mb-3 size-5 text-accent"/>{text}</div>; }
-

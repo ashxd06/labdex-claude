@@ -128,4 +128,3 @@ export function cardForDate(cards: LearningCard[], date: string): LearningCard |
   for (const character of date) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
   return cards[hash % cards.length];
 }
-

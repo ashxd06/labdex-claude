@@ -7,6 +7,7 @@ import { Navigation } from "@/components/layout/Navigation";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { MobileMenu } from "@/components/layout/MobileMenu";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -29,6 +30,7 @@ export function Header() {
             <div className="hidden md:block">
               <UserMenu />
             </div>
+            <ThemeToggle />
             <button
               onClick={() => setMobileOpen(true)}
               type="button"

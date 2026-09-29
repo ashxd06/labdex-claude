@@ -67,8 +67,8 @@ export default async function Page({
           <div className="mt-8">
             <EmptyState
               icon={ClipboardCheck}
-              title="No hay registros todavía."
-              description="El administrador puede agregar contenido desde el panel de administración."
+              title={q ? `No encontramos resultados para «${q}».` : "Estamos preparando fichas de pruebas."}
+              description={q ? "Prueba con otro término o consulta todas las pruebas disponibles." : "Pronto habrá más recursos para consultar. Mientras tanto, revisa otras áreas de LABDEX."}
             />
           </div>
         ) : (

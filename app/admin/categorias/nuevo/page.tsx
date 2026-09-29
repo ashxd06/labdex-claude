@@ -5,4 +5,3 @@ export default async function Page() {
   const categories = await getActiveCategories();
   return <ResourceForm resourceKey="categories" categories={categories} />;
 }
-

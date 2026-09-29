@@ -2,65 +2,72 @@
 
 /* ---------------------------------------------------------------------- */
 /* LABDEX design tokens                                                   */
-/* Dark mode is the default surface. Light mode variables are prepared    */
-/* below (data-theme="light") for Fase 2 but are not wired to a switch    */
-/* yet.                                                                    */
+/* The default is a dark clinical interface; light mode is user-selectable. */
 /* ---------------------------------------------------------------------- */
 
 :root {
+  color-scheme: light;
+  --ldx-bg: #f3f7fa;
+  --ldx-bg-raised: #ffffff;
+  --ldx-surface: #ffffff;
+  --ldx-surface-2: #edf3f7;
+  --ldx-border: #d9e3eb;
+  --ldx-border-strong: #b9c9d5;
+
+  --ldx-text: #162536;
+  --ldx-text-muted: #4b6073;
+  --ldx-text-faint: #647b8f;
+
+  --ldx-primary: #2257a6;
+  --ldx-primary-hover: #194886;
+  --ldx-primary-soft: rgba(34, 87, 166, 0.1);
+
+  --ldx-accent: #087c76;
+  --ldx-accent-hover: #06645f;
+  --ldx-accent-soft: rgba(8, 124, 118, 0.1);
+
+  --ldx-success: #16723c;
+  --ldx-success-soft: rgba(22, 114, 60, 0.1);
+  --ldx-warning: #9a5a08;
+  --ldx-warning-soft: rgba(154, 90, 8, 0.1);
+  --ldx-danger: #b42318;
+  --ldx-danger-soft: rgba(180, 35, 24, 0.1);
+
+  --ldx-focus-ring: rgba(34, 87, 166, 0.55);
+  --ldx-shadow: 0 1px 2px rgba(22, 37, 54, 0.05), 0 10px 30px -16px rgba(22, 37, 54, 0.22);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
   --ldx-bg: #0a0e14;
   --ldx-bg-raised: #0e131b;
   --ldx-surface: #121822;
   --ldx-surface-2: #171f2b;
   --ldx-border: #232e3d;
   --ldx-border-strong: #2e3b4d;
-
   --ldx-text: #e7ecf2;
   --ldx-text-muted: #94a3b8;
-  --ldx-text-faint: #5b6b81;
-
-  --ldx-primary: #2f6feb;
-  --ldx-primary-hover: #4a82f0;
-  --ldx-primary-soft: rgba(47, 111, 235, 0.14);
-
-  --ldx-accent: #14b8a6;
-  --ldx-accent-hover: #2dd4c2;
-  --ldx-accent-soft: rgba(20, 184, 166, 0.14);
-
-  --ldx-success: #22c55e;
-  --ldx-success-soft: rgba(34, 197, 94, 0.14);
-  --ldx-warning: #f59e0b;
-  --ldx-warning-soft: rgba(245, 158, 11, 0.14);
-  --ldx-danger: #ef4444;
-  --ldx-danger-soft: rgba(239, 68, 68, 0.14);
-
-  --ldx-focus-ring: rgba(47, 111, 235, 0.55);
+  --ldx-text-faint: #8291a5;
+  --ldx-primary: #4d83eb;
+  --ldx-primary-hover: #6b97f0;
+  --ldx-primary-soft: rgba(77, 131, 235, 0.16);
+  --ldx-accent: #31c5b4;
+  --ldx-accent-hover: #5dd7c9;
+  --ldx-accent-soft: rgba(49, 197, 180, 0.14);
+  --ldx-success: #4ade80;
+  --ldx-success-soft: rgba(74, 222, 128, 0.14);
+  --ldx-warning: #fbbf24;
+  --ldx-warning-soft: rgba(251, 191, 36, 0.14);
+  --ldx-danger: #f87171;
+  --ldx-danger-soft: rgba(248, 113, 113, 0.14);
+  --ldx-focus-ring: rgba(77, 131, 235, 0.6);
   --ldx-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
 }
 
-/* Fase 2: tema claro preparado (no activo todavia) */
-[data-theme="light"] {
-  --ldx-bg: #f5f7fa;
-  --ldx-bg-raised: #ffffff;
-  --ldx-surface: #ffffff;
-  --ldx-surface-2: #eef1f5;
-  --ldx-border: #dde3ea;
-  --ldx-border-strong: #c7d0db;
-
-  --ldx-text: #10151c;
-  --ldx-text-muted: #4b5768;
-  --ldx-text-faint: #8592a3;
-
-  --ldx-primary: #2255d1;
-  --ldx-primary-hover: #1c47b3;
-  --ldx-primary-soft: rgba(34, 85, 209, 0.08);
-
-  --ldx-accent: #0f9c8c;
-  --ldx-accent-hover: #0c8578;
-  --ldx-accent-soft: rgba(15, 156, 140, 0.1);
-
-  --ldx-shadow: 0 1px 2px rgba(16, 21, 28, 0.06), 0 8px 24px -12px rgba(16, 21, 28, 0.18);
-}
+.logo-for-light { display: inline-block; }
+.logo-for-dark { display: none; }
+[data-theme="dark"] .logo-for-light { display: none; }
+[data-theme="dark"] .logo-for-dark { display: inline-block; }
 
 @theme inline {
   --color-bg: var(--ldx-bg);
@@ -95,10 +102,6 @@
 
 * {
   border-color: var(--ldx-border);
-}
-
-html {
-  color-scheme: dark;
 }
 
 body {

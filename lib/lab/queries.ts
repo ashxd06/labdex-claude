@@ -424,4 +424,3 @@ export async function getLabSettings(): Promise<LabSettings> {
     }
   );
 }
-

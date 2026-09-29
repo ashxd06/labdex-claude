@@ -26,4 +26,3 @@ create policy "Users can update their own learning progress"
   on public.study_learning_progress for update to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
-

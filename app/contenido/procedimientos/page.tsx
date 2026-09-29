@@ -67,8 +67,8 @@ export default async function Page({
           <div className="mt-8">
             <EmptyState
               icon={Workflow}
-              title="No hay registros todavía."
-              description="El administrador puede agregar contenido desde el panel de administración."
+              title={q ? `No encontramos resultados para «${q}».` : "Estamos preparando fichas de procedimientos."}
+              description={q ? "Prueba con otro término o consulta todos los procedimientos disponibles." : "Pronto habrá más recursos para consultar. Mientras tanto, revisa otras áreas de LABDEX."}
             />
           </div>
         ) : (

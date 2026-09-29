@@ -13,8 +13,7 @@ interface LogoProps {
  * ningún componente.
  */
 export function Logo({ variant = "full", className = "" }: LogoProps) {
-  const src = variant === "icon" ? "/brand/icon.svg" : "/brand/logo-dark.svg";
-  const width = variant === "icon" ? 32 : 140;
+  const width = variant === "icon" ? 32 : 150;
   const height = 32;
 
   return (
@@ -23,7 +22,14 @@ export function Logo({ variant = "full", className = "" }: LogoProps) {
       className={`inline-flex items-center gap-2 ${className}`}
       aria-label="LABDEX — Inicio"
     >
-      <Image src={src} alt="LABDEX" width={width} height={height} priority />
+      {variant === "icon" ? (
+        <Image src="/brand/icon.svg" alt="LABDEX" width={width} height={height} priority />
+      ) : (
+        <>
+          <Image src="/brand/logo-light.svg" alt="LABDEX" width={width} height={height} priority className="logo-for-light" />
+          <Image src="/brand/logo-dark.svg" alt="LABDEX" width={width} height={height} priority className="logo-for-dark" />
+        </>
+      )}
     </Link>
   );
 }

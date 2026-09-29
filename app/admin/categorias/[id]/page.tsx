@@ -13,4 +13,3 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!record) notFound();
   return <ResourceForm resourceKey="categories" record={record as unknown as Record<string, unknown>} categories={categories} />;
 }
-

@@ -154,4 +154,3 @@ function PriorityBadge() {
 function formatLabDate(value: string) {
   return new Intl.DateTimeFormat("es-PE", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Lima" }).format(new Date(value));
 }
-

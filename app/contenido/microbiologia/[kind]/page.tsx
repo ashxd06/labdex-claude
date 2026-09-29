@@ -129,8 +129,10 @@ export default async function MicroorganismKindPage({
           <div className="mt-8">
             <EmptyState
               icon={Microscope}
-              title={`No hay ${KIND_VALUE_TO_LABEL[kind].toLowerCase()} registrados todavía.`}
-              description="El administrador puede agregar contenido desde el panel de administración."
+              title={q
+                ? `No encontramos resultados para «${q}».`
+                : `Estamos preparando fichas de ${KIND_VALUE_TO_LABEL[kind].toLowerCase()}.`}
+              description="Explora otros temas o vuelve pronto para consultar nuevas fichas educativas."
             />
           </div>
         ) : (
@@ -148,4 +150,3 @@ export default async function MicroorganismKindPage({
     </div>
   );
 }
-

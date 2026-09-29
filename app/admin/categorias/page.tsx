@@ -22,4 +22,3 @@ export default async function Page({
   }));
   return <ResourceListPage resourceKey="categories" rows={withParent as unknown as Record<string, unknown>[]} searchQuery={q} statusQuery={status} />;
 }
-

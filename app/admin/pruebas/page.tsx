@@ -15,4 +15,3 @@ export default async function Page({
   });
   return <ResourceListPage resourceKey="laboratory_tests" rows={rows as unknown as Record<string, unknown>[]} searchQuery={q} statusQuery={status} />;
 }
-

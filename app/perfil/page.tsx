@@ -8,6 +8,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { logoutAction } from "@/app/actions/auth";
+import { ProfileSettings } from "@/components/profile/ProfileSettings";
 
 export default async function PerfilPage() {
   const { user, profile } = await getSession();
@@ -23,10 +24,10 @@ export default async function PerfilPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
       <Header />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-16 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-semibold text-text">Mi perfil</h1>
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <h1 className="text-2xl font-semibold text-text">Mi cuenta</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Información básica de tu cuenta en LABDEX.
+          Administra tus datos y la seguridad de tu acceso a LABDEX.
         </p>
 
         <Card className="mt-8">
@@ -59,12 +60,9 @@ export default async function PerfilPage() {
           </CardBody>
         </Card>
 
-        <div className="mt-6 rounded-lg border border-dashed border-border p-4 text-sm text-text-faint">
-          La edición de nombre, foto, preferencias, tema, historial y
-          favoritos se habilitará en una próxima fase.
-        </div>
+        <ProfileSettings fullName={profile?.full_name ?? ""} email={user.email ?? ""} />
 
-        <form action={logoutAction} className="mt-8">
+        <form action={logoutAction} className="mt-6">
           <Button type="submit" variant="secondary">
             <LogOut className="size-4" /> Cerrar sesión
           </Button>

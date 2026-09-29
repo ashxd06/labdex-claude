@@ -192,4 +192,3 @@ export async function removeProcedureRelation(microorganismId: string, procedure
     .eq("procedure_id", procedureId);
   revalidatePath(`/admin/microorganismos/${microorganismId}`);
 }
-

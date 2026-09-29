@@ -38,21 +38,40 @@ export default async function MicrobiologiaPage() {
         </p>
 
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {KIND_SECTIONS.map((section) => (
-            <Link
-              key={section.slug}
-              href={`/contenido/microbiologia/${section.slug}`}
-              className="group flex flex-col gap-2 rounded-lg border border-border bg-surface p-6 transition-colors hover:border-accent"
-            >
-              <h2 className="text-base font-semibold text-text">{section.label}</h2>
-              <p className="font-mono text-xs text-text-faint">
-                {countByKind[section.kind] ?? 0} contenidos
-              </p>
-              <span className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-accent">
-                Explorar <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </span>
-            </Link>
-          ))}
+          {KIND_SECTIONS.map((section) => {
+            const count = countByKind[section.kind] ?? 0;
+            const card = (
+              <>
+                <h2 className="text-base font-semibold text-text">{section.label}</h2>
+                <p className="font-mono text-xs text-text-muted">
+                  {count} {count === 1 ? "ficha publicada" : "fichas publicadas"}
+                </p>
+                {count === 0 ? (
+                  <span className="mt-1 w-fit rounded-full bg-surface-2 px-3 py-1 text-xs font-medium text-text-muted">
+                    Contenido en preparación
+                  </span>
+                ) : (
+                  <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-accent">
+                    Explorar <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                )}
+              </>
+            );
+
+            return count === 0 ? (
+              <div key={section.slug} className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-6 shadow-[var(--ldx-shadow)]">
+                {card}
+              </div>
+            ) : (
+              <Link
+                key={section.slug}
+                href={`/contenido/microbiologia/${section.slug}`}
+                className="group flex flex-col gap-2 rounded-xl border border-border bg-surface p-6 shadow-[var(--ldx-shadow)] transition-colors hover:border-accent"
+              >
+                {card}
+              </Link>
+            );
+          })}
         </div>
 
         {subcategories.length > 0 && (
@@ -72,4 +91,3 @@ export default async function MicrobiologiaPage() {
     </div>
   );
 }
-

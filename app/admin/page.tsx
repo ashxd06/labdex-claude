@@ -138,4 +138,3 @@ function formatReviewDate(value: string) {
   if (Number.isNaN(date.getTime())) return "Fecha no disponible";
   return new Intl.DateTimeFormat("es-PE", { dateStyle: "medium", timeZone: "America/Lima" }).format(date);
 }
-

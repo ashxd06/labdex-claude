@@ -292,4 +292,3 @@ export function getResourceConfig(key: string): ResourceConfig {
   }
   return config;
 }
-

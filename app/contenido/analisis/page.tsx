@@ -67,8 +67,8 @@ export default async function Page({
           <div className="mt-8">
             <EmptyState
               icon={FileStack}
-              title="No hay registros todavía."
-              description="El administrador puede agregar contenido desde el panel de administración."
+              title={q ? `No encontramos resultados para «${q}».` : "Estamos preparando fichas de análisis clínicos."}
+              description={q ? "Prueba con otro término o revisa la lista completa de análisis." : "La información publicada es educativa. Pronto habrá más temas para consultar."}
             />
           </div>
         ) : (

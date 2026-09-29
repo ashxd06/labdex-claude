@@ -36,22 +36,39 @@ export function CategoryCard({
 }) {
   const Icon = (icon && ICONS[icon]) || Tags;
 
-  return (
-    <Link
-      href={`/contenido/${slug}`}
-      className="group flex flex-col items-center gap-3 rounded-lg border border-border bg-surface p-8 text-center transition-colors hover:border-accent"
-    >
+  const cardClass = `flex flex-col items-center gap-3 rounded-xl border border-border bg-surface p-6 text-center shadow-[var(--ldx-shadow)] transition-colors sm:p-8 ${
+    count === 0 ? "" : "group hover:border-accent"
+  }`;
+
+  const content = (
+    <>
       <span className="flex size-14 items-center justify-center rounded-full bg-primary-soft text-primary">
         <Icon className="size-6" aria-hidden="true" />
       </span>
       <h2 className="text-base font-semibold uppercase tracking-wide text-text">{name}</h2>
       {description && <p className="text-sm text-text-muted">{description}</p>}
-      <p className="font-mono text-xs text-text-faint">
-        {count === null ? "No se pudo cargar" : `${count} ${count === 1 ? "contenido" : "contenidos"}`}
+      <p className="font-mono text-xs text-text-muted">
+        {count === null
+          ? "Conteo no disponible"
+          : `${count} ${count === 1 ? "contenido publicado" : "contenidos publicados"}`}
       </p>
-      <span className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-accent">
-        Explorar <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-      </span>
-    </Link>
+      {count === 0 ? (
+        <span className="mt-1 rounded-full bg-surface-2 px-3 py-1 text-xs font-medium text-text-muted">
+          Contenido en preparación
+        </span>
+      ) : (
+        <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-accent">
+          Explorar <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+        </span>
+      )}
+    </>
   );
+
+  if (count === 0) {
+    return <div className={cardClass} aria-label={`${name}: contenido en preparación`}>
+      {content}
+    </div>;
+  }
+
+  return <Link href={`/contenido/${slug}`} className={cardClass}>{content}</Link>;
 }

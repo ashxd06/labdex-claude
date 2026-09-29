@@ -205,4 +205,3 @@ function PublicationBadge({ status, pendingChanges }: { status: string; pendingC
   if (status === "archived") return <Badge tone="neutral">Archivado</Badge>;
   return <Badge tone="neutral">Borrador</Badge>;
 }
-

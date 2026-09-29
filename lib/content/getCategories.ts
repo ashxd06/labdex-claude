@@ -4,4 +4,3 @@ import type { Category } from "@/lib/supabase/types";
 export async function getActiveCategories(): Promise<Category[]> {
   return listResourceRows<Category>("categories", { onlyActive: true, orderBy: "display_order", ascending: true });
 }
-

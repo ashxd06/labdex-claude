@@ -244,4 +244,3 @@ export async function retrieveFicheContext(fiche: FicheContext): Promise<Context
     }),
   };
 }
-

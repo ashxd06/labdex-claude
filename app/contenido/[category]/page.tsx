@@ -50,8 +50,13 @@ export default async function CategoryDetailPage({
           <div className="mt-8">
             <EmptyState
               icon={FileStack}
-              title="Este módulo se construirá en una próxima fase."
-              description="La estructura ya está preparada. El contenido se añadirá desde el panel de administración."
+              title="Estamos preparando esta área."
+              description="Pronto habrá más fichas para consultar. Mientras tanto, explora otras áreas de LABDEX."
+              action={
+                <Link href="/contenido" className="mt-1 inline-flex min-h-11 items-center rounded-md px-4 text-sm font-semibold text-accent hover:bg-accent-soft">
+                  Ver otras áreas
+                </Link>
+              }
             />
           </div>
         ) : (
@@ -107,4 +112,3 @@ function ContentGroup({
     </div>
   );
 }
-

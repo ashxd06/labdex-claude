@@ -233,4 +233,3 @@ export function ResourceForm({ resourceKey, record, categories, showAssistant = 
     </div>
   );
 }
-
