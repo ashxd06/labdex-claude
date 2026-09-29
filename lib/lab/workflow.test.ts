@@ -130,6 +130,7 @@ describe("canEditOrderResults", () => {
     expect(canEditOrderResults("cancelada")).toBe(false);
     expect(canEditOrderResults("en_proceso", "emitido")).toBe(false);
     expect(canEditOrderResults("en_proceso", "anulado")).toBe(false);
+    expect(canEditOrderResults("unknown-status", "unknown-status")).toBe(false);
   });
   it("allows an open request with no report or a draft report", () => {
     expect(canEditOrderResults("en_proceso")).toBe(true);
