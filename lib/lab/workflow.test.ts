@@ -8,6 +8,8 @@ import {
   orderStatusAfterFirstResult,
   evaluateOrderCompletion,
   evaluateReportIssuance,
+  canEditOrderResults,
+  computeResultFlag,
 } from "@/lib/lab/workflow";
 
 describe("initialSampleStatus", () => {
@@ -118,5 +120,29 @@ describe("evaluateReportIssuance", () => {
     const result = evaluateReportIssuance("completada");
     expect(result.canIssue).toBe(true);
     expect(result.reason).toBeNull();
+  });
+});
+
+
+describe("canEditOrderResults", () => {
+  it("locks completed or cancelled requests and issued or voided reports", () => {
+    expect(canEditOrderResults("completada")).toBe(false);
+    expect(canEditOrderResults("cancelada")).toBe(false);
+    expect(canEditOrderResults("en_proceso", "emitido")).toBe(false);
+    expect(canEditOrderResults("en_proceso", "anulado")).toBe(false);
+  });
+  it("allows an open request with no report or a draft report", () => {
+    expect(canEditOrderResults("en_proceso")).toBe(true);
+    expect(canEditOrderResults("en_proceso", "borrador")).toBe(true);
+  });
+});
+
+describe("computeResultFlag", () => {
+  it("classifies only complete numeric values with explicit bounds", () => {
+    expect(computeResultFlag("9", 10, 20)).toBe("bajo");
+    expect(computeResultFlag("15", 10, 20)).toBe("normal");
+    expect(computeResultFlag("21", 10, 20)).toBe("alto");
+    expect(computeResultFlag("12 mg/dL", 10, 20)).toBeNull();
+    expect(computeResultFlag("12", null, 20)).toBeNull();
   });
 });
