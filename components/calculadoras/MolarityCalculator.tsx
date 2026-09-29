@@ -14,10 +14,10 @@ const FIELD_OPTIONS: { value: MolarityField; label: string; unit: string }[] = [
   { value: "volume", label: "Volumen", unit: "L" },
 ];
 
-export function MolarityCalculator() {
+export function MolarityCalculator({ initialMolarMass, formula }: { initialMolarMass?: number; formula?: string }) {
   const [solveFor, setSolveFor] = useState<MolarityField>("molarity");
   const [useMass, setUseMass] = useState(true);
-  const [values, setValues] = useState({ mass: "", molarMass: "", moles: "", volume: "", molarity: "" });
+  const [values, setValues] = useState({ mass: "", molarMass: initialMolarMass?.toString() ?? "", moles: "", volume: "", molarity: "" });
   const [result, setResult] = useState<MolarityResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +59,11 @@ export function MolarityCalculator() {
 
   return (
     <div className="flex flex-col gap-6">
+      {initialMolarMass && (
+        <p className="rounded-lg border border-accent/40 bg-accent-soft/40 px-3 py-2 text-sm text-text">
+          Masa molar cargada desde la tabla periódica{formula ? <> para <strong className="font-mono">{formula}</strong></> : null}: <strong>{initialMolarMass.toFixed(3)} g/mol</strong>. Revisa que corresponda a la sustancia que estás preparando.
+        </p>
+      )}
       <SolveForPicker
         options={FIELD_OPTIONS.map(({ value, label }) => ({ value, label }))}
         value={solveFor}
@@ -157,3 +162,4 @@ export function MolarityCalculator() {
     </div>
   );
 }
+
