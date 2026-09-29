@@ -10,6 +10,7 @@ export const revalidate = 0;
 
 const STATUS_OPTIONS = [
   { value: "todos", label: "Todos" },
+  { value: "pendientes", label: "Por revisar" },
   { value: "pendiente", label: "Pendiente" },
   { value: "ingresado", label: "Ingresado" },
   { value: "validado", label: "Validado" },
@@ -56,19 +57,19 @@ export default async function ResultadosPage({
         <p className="mt-1 text-sm text-text-muted">{total} registrados</p>
       </div>
 
-      <div className="flex items-center gap-1 rounded-md border border-border bg-surface p-1 w-fit">
+      <nav aria-label="Filtrar resultados por estado" className="flex w-fit max-w-full items-center gap-1 overflow-x-auto rounded-md border border-border bg-surface p-1">
         {STATUS_OPTIONS.map((opt) => (
           <Link
             key={opt.value}
             href={`/laboratorio/resultados?status=${opt.value}`}
-            className={`rounded px-3 py-1.5 text-sm transition-colors ${
+            className={`whitespace-nowrap rounded px-3 py-1.5 text-sm transition-colors ${
               (status ?? "todos") === opt.value ? "bg-primary-soft text-primary" : "text-text-muted hover:text-text"
             }`}
           >
             {opt.label}
           </Link>
         ))}
-      </div>
+      </nav>
 
       {results.length === 0 ? (
         <EmptyState icon={FileCheck2} title="No hay resultados registrados todavía." />
@@ -128,3 +129,4 @@ export default async function ResultadosPage({
     </div>
   );
 }
+

@@ -16,14 +16,15 @@ const KIND_LABELS: Record<string, string> = Object.fromEntries(
 export default async function MicroorganismosAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; kind?: string }>;
+  searchParams: Promise<{ q?: string; kind?: string; status?: string }>;
 }) {
-  const { q, kind } = await searchParams;
+  const { q, kind, status } = await searchParams;
 
   const rows = await listResourceRows<Microorganism>("microorganisms", {
     search: q,
     searchColumns: ["scientific_name", "common_name", "slug"],
     kind: kind && kind !== "todos" ? kind : undefined,
+    status: status && status !== "todos" ? status : undefined,
     orderBy: "scientific_name",
     ascending: true,
   });
@@ -69,6 +70,18 @@ export default async function MicroorganismosAdminPage({
             </option>
           ))}
         </select>
+        <select
+          name="status"
+          defaultValue={status ?? "todos"}
+          aria-label="Filtrar por publicación"
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
+        >
+          <option value="todos">Todos los estados</option>
+          <option value="draft">Borradores</option>
+          <option value="review">Cambios por publicar</option>
+          <option value="published">Publicados</option>
+          <option value="archived">Archivados</option>
+        </select>
         <Button type="submit" variant="secondary" size="sm">
           Filtrar
         </Button>
@@ -96,13 +109,17 @@ export default async function MicroorganismosAdminPage({
                   <th className="px-4 py-3 font-medium">Nombre científico</th>
                   <th className="px-4 py-3 font-medium">Tipo</th>
                   <th className="px-4 py-3 font-medium">Gram</th>
-                  <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">Publicación</th>
+                  <th className="px-4 py-3 font-medium">Activo</th>
                   <th className="px-4 py-3 text-right font-medium">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map((row) => (
                   <tr key={row.id} className="bg-surface hover:bg-surface-2/60">
+                    <td className="px-4 py-3">
+                      <PublicationBadge status={row.status} pendingChanges={Boolean((row as Microorganism & { _review_pending?: boolean })._review_pending)} />
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium uppercase tracking-wide text-text">
                         {row.scientific_name}
@@ -152,11 +169,14 @@ export default async function MicroorganismosAdminPage({
                     </p>
                     <p className="text-xs text-text-faint">{KIND_LABELS[row.kind] ?? row.kind}</p>
                   </div>
+                  <div className="flex flex-wrap gap-2">
+                    <PublicationBadge status={row.status} pendingChanges={Boolean((row as Microorganism & { _review_pending?: boolean })._review_pending)} />
                   {row.is_active ? (
                     <Badge tone="success">Activo</Badge>
                   ) : (
                     <Badge tone="neutral">Inactivo</Badge>
                   )}
+                  </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <Link href={`/admin/microorganismos/${row.id}`}>
@@ -178,3 +198,11 @@ export default async function MicroorganismosAdminPage({
     </div>
   );
 }
+
+function PublicationBadge({ status, pendingChanges }: { status: string; pendingChanges: boolean }) {
+  if (pendingChanges) return <Badge tone="warning">Cambios por publicar</Badge>;
+  if (status === "published") return <Badge tone="success">Publicado</Badge>;
+  if (status === "archived") return <Badge tone="neutral">Archivado</Badge>;
+  return <Badge tone="neutral">Borrador</Badge>;
+}
+

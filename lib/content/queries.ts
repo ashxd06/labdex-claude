@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient as createTypedClient } from "@/lib/supabase/server";
-import { getResourceConfig } from "@/lib/content/resourceConfigs";
+import { getResourceConfig, RESOURCE_CONFIGS } from "@/lib/content/resourceConfigs";
 
 /**
  * Las tablas de contenido (Fase 2) no están en el tipo genérico `Database`
@@ -20,6 +20,7 @@ export interface ListParams {
   onlyActive?: boolean;
   categoryId?: string;
   kind?: string;
+  status?: string;
   orderBy?: string;
   ascending?: boolean;
   page?: number;
@@ -42,6 +43,7 @@ export async function listResourceRows<T>(
     onlyActive,
     categoryId,
     kind,
+    status,
     orderBy = "created_at",
     ascending = false,
   }: ListParams = {}
@@ -58,6 +60,19 @@ export async function listResourceRows<T>(
   if (kind) {
     query = query.eq("kind", kind);
   }
+  if (status === "review") {
+    const { data: draftRows, error: draftError } = await supabase.from("content_drafts")
+      .select("record_id").eq("resource_key", table);
+    if (draftError) {
+      console.error(`[listResourceRows:review:${table}]`, draftError.message);
+      return [];
+    }
+    const ids = (draftRows ?? []).map((row: { record_id: string }) => row.record_id);
+    if (ids.length === 0) return [];
+    query = query.in("id", ids);
+  } else if (status) {
+    query = query.eq("status", status);
+  }
   if (search && searchColumns.length > 0) {
     const orFilter = searchColumns.map((col) => `${col}.ilike.%${search}%`).join(",");
     query = query.or(orFilter);
@@ -70,7 +85,9 @@ export async function listResourceRows<T>(
     console.error(`[listResourceRows:${table}]`, error.message);
     return [];
   }
-  return (data ?? []) as T[];
+  return (data ?? []).map((row) => status === "review"
+    ? { ...row, _review_pending: true }
+    : row) as T[];
 }
 
 /**
@@ -87,6 +104,7 @@ export async function listResourceRowsPaged<T>(
     onlyActive,
     categoryId,
     kind,
+    status,
     orderBy = "created_at",
     ascending = false,
     page = 1,
@@ -103,6 +121,7 @@ export async function listResourceRowsPaged<T>(
   if (onlyActive) query = query.eq("is_active", true).eq("status", "published");
   if (categoryId) query = query.eq("category_id", categoryId);
   if (kind) query = query.eq("kind", kind);
+  if (status) query = query.eq("status", status);
   if (search && searchColumns.length > 0) {
     const orFilter = searchColumns.map((col) => `${col}.ilike.%${search}%`).join(",");
     query = query.or(orFilter);
@@ -187,6 +206,103 @@ export async function countResourceRowsResult(table: string, publicOnly = false)
     return { count: null, error: error.message };
   }
   return { count: count ?? 0, error: null };
+}
+
+export interface ContentReviewItem {
+  id: string;
+  resourceKey: string;
+  resourceLabel: string;
+  title: string;
+  href: string;
+  updatedAt: string;
+  kind: "draft" | "changes";
+}
+
+export async function getAdminContentReviewData(limit = 6): Promise<{
+  draftCount: number | null;
+  changeCount: number | null;
+  items: ContentReviewItem[];
+  error: boolean;
+}> {
+  const supabase = await createClient();
+  const resources = Object.values(RESOURCE_CONFIGS);
+  const [draftResults, changesResult] = await Promise.all([
+    Promise.all(resources.map(async (config) => {
+      const result = await supabase.from(config.table)
+        .select(`id, ${config.titleField}, updated_at`, { count: "exact" })
+        .eq("status", "draft")
+        .order("updated_at", { ascending: false })
+        .limit(limit);
+      return { config, ...result };
+    })),
+    supabase.from("content_drafts")
+      .select("resource_key, record_id, payload, updated_at", { count: "exact" })
+      .order("updated_at", { ascending: false })
+      .limit(limit),
+  ]);
+
+  let error = Boolean(changesResult.error || changesResult.count === null);
+  let draftCount = 0;
+  const items: ContentReviewItem[] = [];
+  for (const { config, data, count, error: queryError } of draftResults) {
+    if (queryError || count === null) {
+      error = true;
+      continue;
+    }
+    draftCount += count;
+    for (const row of (data ?? []) as unknown as Record<string, unknown>[]) {
+      items.push({
+        id: String(row.id),
+        resourceKey: config.key,
+        resourceLabel: config.labelSingular,
+        title: String(row[config.titleField] ?? "Sin título"),
+        href: `${config.adminPath}/${row.id}`,
+        updatedAt: String(row.updated_at ?? ""),
+        kind: "draft",
+      });
+    }
+  }
+
+  const changeRows = (changesResult.data ?? []) as Array<{
+    resource_key: string;
+    record_id: string;
+    payload: Record<string, unknown> | null;
+    updated_at: string;
+  }>;
+  const grouped = new Map<string, string[]>();
+  for (const row of changeRows) {
+    const ids = grouped.get(row.resource_key) ?? [];
+    ids.push(row.record_id);
+    grouped.set(row.resource_key, ids);
+  }
+
+  const changeItems = await Promise.all([...grouped.entries()].map(async ([resourceKey, ids]) => {
+    const config = getResourceConfig(resourceKey);
+    const { data, error: itemError } = await supabase.from(config.table)
+      .select(`id, ${config.titleField}`).in("id", ids);
+    if (itemError) {
+      error = true;
+      return [];
+    }
+    const titles = new Map(((data ?? []) as unknown as Record<string, unknown>[]).map((row) => [String(row.id), String(row[config.titleField] ?? "Sin título")]));
+    return changeRows.filter((row) => row.resource_key === resourceKey).map((row) => ({
+      id: row.record_id,
+      resourceKey,
+      resourceLabel: config.labelSingular,
+      title: String(row.payload?.[config.titleField] ?? titles.get(row.record_id) ?? "Sin título"),
+      href: `${config.adminPath}/${row.record_id}`,
+      updatedAt: row.updated_at,
+      kind: "changes" as const,
+    }));
+  }));
+
+  const changeCount = changesResult.error || changesResult.count === null ? null : changesResult.count;
+  return {
+    draftCount: error && draftResults.some((result) => result.error || result.count === null) ? null : draftCount,
+    changeCount,
+    items: [...items, ...changeItems.flat()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit),
+    error,
+  };
 }
 
 /**

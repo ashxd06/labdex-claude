@@ -12,6 +12,7 @@ interface ResourceListPageProps {
   resourceKey: string;
   rows: Record<string, unknown>[];
   searchQuery?: string;
+  statusQuery?: string;
 }
 
 const COLUMN_LABELS: Record<string, string> = {
@@ -26,7 +27,7 @@ const COLUMN_LABELS: Record<string, string> = {
   parent_name: "Categoría superior",
 };
 
-export function ResourceListPage({ resourceKey, rows, searchQuery }: ResourceListPageProps) {
+export function ResourceListPage({ resourceKey, rows, searchQuery, statusQuery }: ResourceListPageProps) {
   const config = getResourceConfig(resourceKey);
   const Icon = config.icon;
 
@@ -48,7 +49,7 @@ export function ResourceListPage({ resourceKey, rows, searchQuery }: ResourceLis
         </Link>
       </div>
 
-      <form className="max-w-md">
+      <form className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 focus-within:border-primary">
           <Search className="size-4 text-text-muted" />
           <input
@@ -59,6 +60,17 @@ export function ResourceListPage({ resourceKey, rows, searchQuery }: ResourceLis
             className="w-full bg-transparent text-sm outline-none placeholder:text-text-faint"
           />
         </label>
+        <label className="flex items-center gap-2 text-sm text-text-muted">
+          <span>Estado</span>
+          <select name="status" defaultValue={statusQuery ?? "todos"} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary">
+            <option value="todos">Todos</option>
+            <option value="draft">Borradores</option>
+            <option value="review">Cambios por publicar</option>
+            <option value="published">Publicados</option>
+            <option value="archived">Archivados</option>
+          </select>
+        </label>
+        <Button type="submit" variant="secondary" size="sm">Filtrar</Button>
       </form>
 
       {rows.length === 0 ? (
@@ -155,6 +167,7 @@ export function ResourceListPage({ resourceKey, rows, searchQuery }: ResourceLis
 
 function renderCell(row: Record<string, unknown>, col: string) {
   if (col === "status") {
+    if (row._review_pending === true) return <Badge tone="warning">Cambios por publicar</Badge>;
     const status = String(row.status ?? "draft");
     const label = status === "published" ? "Publicado" : status === "archived" ? "Archivado" : "Borrador";
     return <Badge tone={status === "published" ? "success" : "neutral"}>{label}</Badge>;

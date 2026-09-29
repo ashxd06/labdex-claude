@@ -11,30 +11,42 @@ import type {
 import type { ClinicalAnalysis } from "@/lib/supabase/types";
 
 export interface DashboardStats {
-  patients: number;
-  samples: number;
-  pendingOrders: number;
-  pendingResults: number;
-  issuedReports: number;
+  patients: number | null;
+  samples: number | null;
+  pendingOrders: number | null;
+  pendingResults: number | null;
+  issuedReports: number | null;
+  urgentOrders: number | null;
+  hasErrors: boolean;
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await labClient();
 
-  const [patients, samples, pendingOrders, pendingResults, issuedReports] = await Promise.all([
+  const [patients, samples, pendingOrders, pendingResults, issuedReports, urgentOrders] = await Promise.all([
     supabase.from("patients").select("*", { count: "exact", head: true }),
     supabase.from("samples").select("*", { count: "exact", head: true }),
     supabase.from("lab_orders").select("*", { count: "exact", head: true }).in("status", ["pendiente", "en_proceso"]),
     supabase.from("lab_results").select("*", { count: "exact", head: true }).in("status", ["pendiente", "ingresado"]),
     supabase.from("lab_reports").select("*", { count: "exact", head: true }).eq("status", "emitido"),
+    supabase.from("lab_orders").select("*", { count: "exact", head: true })
+      .eq("priority", "urgente").in("status", ["pendiente", "en_proceso"]),
   ]);
 
+  const results = [patients, samples, pendingOrders, pendingResults, issuedReports, urgentOrders];
+  results.forEach((result, index) => {
+    if (result.error) console.error(`[getDashboardStats:${index}]`, result.error.message);
+  });
+  const countOrNull = (result: { count: number | null; error: unknown }) => result.error ? null : result.count ?? 0;
+
   return {
-    patients: patients.count ?? 0,
-    samples: samples.count ?? 0,
-    pendingOrders: pendingOrders.count ?? 0,
-    pendingResults: pendingResults.count ?? 0,
-    issuedReports: issuedReports.count ?? 0,
+    patients: countOrNull(patients),
+    samples: countOrNull(samples),
+    pendingOrders: countOrNull(pendingOrders),
+    pendingResults: countOrNull(pendingResults),
+    issuedReports: countOrNull(issuedReports),
+    urgentOrders: countOrNull(urgentOrders),
+    hasErrors: results.some((result) => Boolean(result.error)),
   };
 }
 
@@ -45,22 +57,27 @@ export interface RecentActivityRow {
   status: string;
   orderCode: string;
   reportNumber: string | null;
+  priority: string;
 }
 
-export async function getRecentActivity(limit = 8): Promise<RecentActivityRow[]> {
+export async function getRecentActivity(limit = 8): Promise<{ rows: RecentActivityRow[]; error: boolean }> {
   const supabase = await labClient();
   const { data, error } = await supabase
     .from("lab_orders")
-    .select("id, order_code, status, requested_at, patients(first_name, last_name), lab_reports(report_number)")
+    .select("id, order_code, status, priority, requested_at, patients(first_name, last_name), lab_reports(report_number)")
     .order("requested_at", { ascending: false })
     .limit(limit);
 
-  if (error || !data) return [];
+  if (error || !data) {
+    if (error) console.error("[getRecentActivity]", error.message);
+    return { rows: [], error: Boolean(error) };
+  }
 
-  return (data as unknown as Array<{
+  const rows = (data as unknown as Array<{
     id: string;
     order_code: string;
     status: string;
+    priority: string;
     requested_at: string;
     patients: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null;
     lab_reports: { report_number: string }[] | { report_number: string } | null;
@@ -72,10 +89,46 @@ export async function getRecentActivity(limit = 8): Promise<RecentActivityRow[]>
       date: row.requested_at,
       patientName: patient ? `${patient.first_name} ${patient.last_name}` : "—",
       status: row.status,
+      priority: row.priority,
       orderCode: row.order_code,
       reportNumber: report?.report_number ?? null,
     };
   });
+  return { rows, error: false };
+}
+
+export async function getOldestOpenOrders(limit = 5): Promise<{ rows: RecentActivityRow[]; error: boolean }> {
+  const supabase = await labClient();
+  const { data, error } = await supabase
+    .from("lab_orders")
+    .select("id, order_code, status, priority, requested_at, patients(first_name, last_name)")
+    .in("status", ["pendiente", "en_proceso"])
+    .order("requested_at", { ascending: true })
+    .limit(limit);
+  if (error || !data) {
+    if (error) console.error("[getOldestOpenOrders]", error.message);
+    return { rows: [], error: Boolean(error) };
+  }
+  const rows = (data as unknown as Array<{
+    id: string;
+    order_code: string;
+    status: string;
+    priority: string;
+    requested_at: string;
+    patients: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null;
+  }>).map((row) => {
+    const patient = Array.isArray(row.patients) ? row.patients[0] : row.patients;
+    return {
+      id: row.id,
+      date: row.requested_at,
+      patientName: patient ? `${patient.first_name} ${patient.last_name}` : "—",
+      status: row.status,
+      orderCode: row.order_code,
+      reportNumber: null,
+      priority: row.priority,
+    };
+  });
+  return { rows, error: false };
 }
 
 export interface PatientListParams {
@@ -197,11 +250,12 @@ export async function getSamplesForPatient(patientId: string): Promise<Sample[]>
 
 export interface OrderListParams {
   status?: string;
+  priority?: string;
   page?: number;
   pageSize?: number;
 }
 
-export async function listOrders({ status, page = 1, pageSize = 20 }: OrderListParams = {}) {
+export async function listOrders({ status, priority, page = 1, pageSize = 20 }: OrderListParams = {}) {
   const supabase = await labClient();
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -210,10 +264,13 @@ export async function listOrders({ status, page = 1, pageSize = 20 }: OrderListP
     .from("lab_orders")
     .select("*, patients(first_name, last_name, internal_code)", { count: "exact" });
 
-  if (status && status !== "todos") {
+  if (status === "abiertas") {
+    query = query.in("status", ["pendiente", "en_proceso"]);
+  } else if (status && status !== "todos") {
     query = query.eq("status", status);
   }
-  query = query.order("requested_at", { ascending: false }).range(from, to);
+  if (priority && priority !== "todas") query = query.eq("priority", priority);
+  query = query.order("requested_at", { ascending: status === "abiertas" }).range(from, to);
 
   const { data, error, count } = await query;
   if (error) {
@@ -298,7 +355,9 @@ export async function listResults({ status, page = 1, pageSize = 20 }: ResultLis
       { count: "exact" }
     );
 
-  if (status && status !== "todos") {
+  if (status === "pendientes") {
+    query = query.in("status", ["pendiente", "ingresado"]);
+  } else if (status && status !== "todos") {
     query = query.eq("status", status);
   }
   query = query.order("created_at", { ascending: false }).range(from, to);
