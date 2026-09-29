@@ -28,6 +28,7 @@ export function ReportActions({
   }
 
   function handleVoid() {
+    if (!window.confirm("¿Anular este informe? Esta acción lo marcará como no válido.")) return;
     startTransition(async () => {
       await voidReport(reportId);
       router.refresh();
