@@ -7,7 +7,15 @@ export const metadata = {
   title: "Molaridad | Calculadoras | LABDEX",
 };
 
-export default function MolaridadPage() {
+type MolaridadPageProps = { searchParams: Promise<{ masaMolar?: string | string[]; formula?: string | string[] }> };
+
+export default async function MolaridadPage({ searchParams }: MolaridadPageProps) {
+  const params = await searchParams;
+  const massParam = Array.isArray(params.masaMolar) ? params.masaMolar[0] : params.masaMolar;
+  const formulaParam = Array.isArray(params.formula) ? params.formula[0] : params.formula;
+  const parsedMolarMass = massParam ? Number(massParam) : NaN;
+  const initialMolarMass = Number.isFinite(parsedMolarMass) && parsedMolarMass > 0 && parsedMolarMass <= 100_000 ? parsedMolarMass : undefined;
+  const formula = initialMolarMass && formulaParam && formulaParam.length <= 100 ? formulaParam : undefined;
   return (
     <div>
       <Breadcrumbs
@@ -22,8 +30,9 @@ export default function MolaridadPage() {
       </div>
 
       <div className="mt-8">
-        <MolarityCalculator />
+        <MolarityCalculator initialMolarMass={initialMolarMass} formula={formula} />
       </div>
     </div>
   );
 }
+
