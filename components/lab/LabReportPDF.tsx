@@ -4,19 +4,19 @@ import type { OrderItemWithDetails } from "@/lib/lab/queries";
 import { calculateAge } from "@/lib/lab/shared";
 
 /**
- * Informe PDF de laboratorio (Fase 4, §7 — rediseño completo).
+ * Informe PDF de laboratorio (Fase 4, §7 - rediseño completo).
  *
  * Cambios respecto a la versión anterior:
  * - Se agrega la columna "Interpretación" (bajo/normal/alto), que existía
  *   en la base de datos (`lab_results.flag`) pero nunca se mostraba en
  *   ningún lado, ni siquiera aquí.
  * - El sello ahora se superpone al bloque de firma en vez de aparecer como
- *   un recuadro suelto al costado — el sello se pinta primero (queda
+ *   un recuadro suelto al costado - el sello se pinta primero (queda
  *   detrás) y la firma/nombre se pintan encima.
  * - Se agrega el médico solicitante y la fecha/condición de recepción de
  *   la muestra.
  * - Sexo se muestra en español (Masculino/Femenino/Otro) y, junto con
- *   Edad, solo aparece si el dato existe — nunca un "—" que no aporta nada.
+ *   Edad, solo aparece si el dato existe; nunca un "N/D" que no aporta nada.
  * - La etiqueta de fecha ya no dice siempre "Emitido": un informe en
  *   estado "borrador" no ha sido emitido todavía, y se marca como tal con
  *   un aviso visible, para no confundirlo con un documento oficial.
@@ -25,54 +25,81 @@ import { calculateAge } from "@/lib/lab/shared";
  */
 
 const styles = StyleSheet.create({
-  page: { padding: 36, fontSize: 10, fontFamily: "Helvetica", color: "#10151c" },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
-  labName: { fontSize: 16, fontWeight: 700 },
-  labMeta: { fontSize: 9, color: "#4b5768", marginTop: 2 },
-  logo: { width: 60, height: 60, objectFit: "contain" },
-  reportTitle: { fontSize: 12, fontWeight: 700, textAlign: "right" },
-  reportMeta: { fontSize: 9, color: "#4b5768", textAlign: "right", marginTop: 2 },
+  page: { padding: 36, fontSize: 10, fontFamily: "Helvetica", color: "#162433" },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#12344b",
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    marginBottom: 17,
+  },
+  brandBlock: { flexDirection: "row", alignItems: "center", width: "59%" },
+  brandText: { flex: 1, minWidth: 0 },
+  labName: { fontSize: 17, fontWeight: 700, color: "#ffffff" },
+  labDescriptor: { fontSize: 7.5, fontWeight: 700, color: "#8ee0d0", marginTop: 2, letterSpacing: 0.7 },
+  labMeta: { fontSize: 8, color: "#d4e1e8", marginTop: 2 },
+  logo: { width: 52, height: 52, objectFit: "contain", marginRight: 10 },
+  reportBlock: { width: "41%", alignItems: "flex-end" },
+  reportEyebrow: { fontSize: 7.5, fontWeight: 700, color: "#8ee0d0", textAlign: "right", marginBottom: 3 },
+  reportTitle: { fontSize: 11, fontWeight: 700, color: "#ffffff", textAlign: "right" },
+  reportNumber: { fontSize: 12, fontWeight: 700, color: "#ffffff", textAlign: "right", marginTop: 5 },
+  reportMeta: { fontSize: 8, color: "#d4e1e8", textAlign: "right", marginTop: 3 },
   draftBanner: {
     marginBottom: 14,
-    paddingVertical: 5,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: "#c25b3f",
     borderStyle: "dashed",
+    borderRadius: 4,
     textAlign: "center",
     fontSize: 8,
     fontWeight: 700,
-    color: "#c25b3f",
+    color: "#a33c29",
   },
   sectionTitle: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: 700,
-    marginTop: 14,
+    color: "#173e58",
+    marginTop: 13,
     marginBottom: 6,
-    paddingBottom: 3,
+    paddingBottom: 4,
+    paddingLeft: 7,
+    borderLeftWidth: 3,
+    borderLeftColor: "#2ba994",
     borderBottomWidth: 1,
-    borderBottomColor: "#dde3ea",
+    borderBottomColor: "#dbe5eb",
+    letterSpacing: 0.4,
   },
   row: { flexDirection: "row", marginBottom: 3 },
-  label: { width: 110, color: "#4b5768" },
-  value: { flex: 1, fontWeight: 500 },
+  label: { width: 110, color: "#536779" },
+  value: { flex: 1, fontWeight: 500, color: "#182a3a" },
   table: { marginTop: 4 },
-  tableHeaderRow: { flexDirection: "row", backgroundColor: "#eef1f5", paddingVertical: 5, paddingHorizontal: 4 },
+  tableHeaderRow: { flexDirection: "row", backgroundColor: "#eaf1f5", paddingVertical: 7 },
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 5,
-    paddingHorizontal: 4,
+    paddingVertical: 7,
+    paddingHorizontal: 0,
+    backgroundColor: "#f8fafb",
     borderBottomWidth: 1,
-    borderBottomColor: "#eef1f5",
+    borderBottomColor: "#e4ebef",
   },
-  colExam: { flex: 2.1 },
-  colResult: { flex: 1.2 },
-  colUnit: { flex: 0.9 },
-  colRange: { flex: 1.6 },
-  colFlag: { flex: 1 },
-  tableHeaderText: { fontWeight: 700, fontSize: 9 },
-  footer: { position: "absolute", bottom: 24, left: 36, right: 36, fontSize: 8, color: "#8592a3", textAlign: "center" },
-  signatureBlock: { marginTop: 44, flexDirection: "row", justifyContent: "center" },
+  tableCell: { minWidth: 0, flexShrink: 0, paddingHorizontal: 4, fontSize: 8.5, color: "#1d2d3b" },
+  colExam: { width: "29%" },
+  colResult: { width: "16%" },
+  colUnit: { width: "12%" },
+  colRange: { width: "25%" },
+  colFlag: { width: "18%" },
+  colResultValue: { fontWeight: 700, color: "#12344b" },
+  tableHeaderText: { fontWeight: 700, fontSize: 8, color: "#2e4d62" },
+  observationCard: { backgroundColor: "#f4f8fa", borderLeftWidth: 2, borderLeftColor: "#2ba994", padding: 8, marginBottom: 6 },
+  observationName: { fontSize: 8, fontWeight: 700, color: "#536779", marginBottom: 2 },
+  observationText: { fontSize: 9, color: "#1d2d3b" },
+  footer: { position: "absolute", bottom: 22, left: 36, right: 36, fontSize: 7.5, color: "#7a8c99", textAlign: "center", borderTopWidth: 1, borderTopColor: "#e1e8ec", paddingTop: 5 },
+  signatureBlock: { marginTop: 34, flexDirection: "row", justifyContent: "center" },
   signatureWrap: { position: "relative", width: 220, alignItems: "center" },
   sealBehind: { position: "absolute", bottom: -6, right: 4, width: 92, height: 92, objectFit: "contain", opacity: 0.88 },
   signatureImg: { width: 100, height: 38, alignSelf: "center" },
@@ -131,21 +158,24 @@ export function LabReportPDF({
     <Document title={`LABDEX-${report.report_number}`}>
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
-          <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+          <View style={styles.brandBlock}>
             {logoUrl && (
               // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image (not next/image), no alt prop exists
               <Image src={logoUrl} style={styles.logo} />
             )}
-            <View>
+            <View style={styles.brandText}>
               <Text style={styles.labName}>{settings.lab_name}</Text>
+              <Text style={styles.labDescriptor}>LABORATORIO CLÍNICO</Text>
               {settings.address && <Text style={styles.labMeta}>{settings.address}</Text>}
               {settings.phone && <Text style={styles.labMeta}>Tel: {settings.phone}</Text>}
               {settings.email && <Text style={styles.labMeta}>{settings.email}</Text>}
             </View>
           </View>
-          <View>
+          <View style={styles.reportBlock}>
+            <Text style={styles.reportEyebrow}>REPORTE DE LABORATORIO</Text>
             <Text style={styles.reportTitle}>INFORME DE RESULTADOS</Text>
-            <Text style={styles.reportMeta}>N.º {report.report_number}</Text>
+            <Text style={styles.reportNumber}>N.º {report.report_number}</Text>
+            <Text style={styles.reportMeta}>Solicitud: {order.order_code}</Text>
             <Text style={styles.reportMeta}>
               {isIssued ? "Emitido" : "Creado"}: {new Date(displayDate).toLocaleDateString("es")}
             </Text>
@@ -153,9 +183,9 @@ export function LabReportPDF({
         </View>
 
         {isVoided ? (
-          <Text style={styles.draftBanner}>ANULADO — Documento no válido</Text>
+          <Text style={styles.draftBanner}>ANULADO - Documento no válido</Text>
         ) : !isIssued ? (
-          <Text style={styles.draftBanner}>BORRADOR — Documento no válido como informe oficial hasta su emisión</Text>
+          <Text style={styles.draftBanner}>BORRADOR - Documento no válido como informe oficial hasta su emisión</Text>
         ) : null}
 
         <Text style={styles.sectionTitle}>DATOS DEL PACIENTE</Text>
@@ -167,7 +197,7 @@ export function LabReportPDF({
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Documento</Text>
-          <Text style={styles.value}>{patient.document_id || "—"}</Text>
+          <Text style={styles.value}>{patient.document_id || "N/D"}</Text>
         </View>
         {age !== null && (
           <View style={styles.row}>
@@ -231,22 +261,23 @@ export function LabReportPDF({
         <Text style={styles.sectionTitle}>RESULTADOS</Text>
         <View style={styles.table}>
           <View style={styles.tableHeaderRow} fixed>
-            <Text style={[styles.colExam, styles.tableHeaderText]}>Examen</Text>
-            <Text style={[styles.colResult, styles.tableHeaderText]}>Resultado</Text>
-            <Text style={[styles.colUnit, styles.tableHeaderText]}>Unidad</Text>
-            <Text style={[styles.colRange, styles.tableHeaderText]}>Valores de referencia</Text>
-            <Text style={[styles.colFlag, styles.tableHeaderText]}>Interpretación</Text>
+            <Text style={[styles.tableCell, styles.colExam, styles.tableHeaderText]}>Examen</Text>
+            <Text style={[styles.tableCell, styles.colResult, styles.tableHeaderText]}>Resultado</Text>
+            <Text style={[styles.tableCell, styles.colUnit, styles.tableHeaderText]}>Unidad</Text>
+            <Text style={[styles.tableCell, styles.colRange, styles.tableHeaderText]}>Valores de referencia</Text>
+            <Text style={[styles.tableCell, styles.colFlag, styles.tableHeaderText]}>Interpretación</Text>
           </View>
           {items.map((item) => {
             const flag = flagDisplay(item.lab_results?.flag);
+            const columnStyle = [styles.tableCell];
             return (
               <View key={item.id} style={styles.tableRow} wrap={false}>
-                <Text style={styles.colExam}>{item.clinical_analyses.name}</Text>
-                <Text style={styles.colResult}>{item.lab_results?.result_value || "—"}</Text>
-                <Text style={styles.colUnit}>{item.lab_results?.unit || "—"}</Text>
-                <Text style={styles.colRange}>{item.lab_results?.reference_range_text || "—"}</Text>
-                <Text style={[styles.colFlag, flag ? { color: flag.color, fontWeight: 700 } : undefined]}>
-                  {flag ? flag.label : "—"}
+                <Text style={[...columnStyle, styles.colExam]}>{item.clinical_analyses.name}</Text>
+                <Text style={[...columnStyle, styles.colResult, styles.colResultValue]}>{item.lab_results?.result_value || "N/D"}</Text>
+                <Text style={[...columnStyle, styles.colUnit]}>{item.lab_results?.unit || "N/D"}</Text>
+                <Text style={[...columnStyle, styles.colRange]}>{item.lab_results?.reference_range_text || "N/D"}</Text>
+                <Text style={[...columnStyle, styles.colFlag, flag ? { color: flag.color, fontWeight: 700 } : undefined]}>
+                  {flag ? flag.label : "No calculada"}
                 </Text>
               </View>
             );
@@ -259,9 +290,10 @@ export function LabReportPDF({
             {items
               .filter((i) => i.lab_results?.observation)
               .map((i) => (
-                <Text key={i.id} style={{ marginBottom: 3 }}>
-                  {i.clinical_analyses.name}: {i.lab_results?.observation}
-                </Text>
+                <View key={i.id} style={styles.observationCard}>
+                  <Text style={styles.observationName}>{i.clinical_analyses.name}</Text>
+                  <Text style={styles.observationText}>{i.lab_results?.observation}</Text>
+                </View>
               ))}
           </>
         )}
@@ -277,7 +309,7 @@ export function LabReportPDF({
               <Image src={signatureUrl} style={styles.signatureImg} />
             )}
             <View style={styles.signatureLine}>
-              <Text>{report.responsible_name || settings.responsible_name || "—"}</Text>
+              <Text>{report.responsible_name || settings.responsible_name || "N/D"}</Text>
               <Text style={{ fontSize: 8, color: "#4b5768" }}>
                 {report.responsible_title || settings.responsible_title || ""}
               </Text>
