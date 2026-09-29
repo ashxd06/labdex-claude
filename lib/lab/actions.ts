@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth/getSession";
 import { isLabStaff } from "@/lib/permissions";
 import {
   initialSampleStatus,
+  canEditOrderResults,
   evaluateOrderCompletion,
   canTransitionSampleStatus,
   sampleStatusWhenOrderCompletes,
@@ -283,6 +284,11 @@ export async function addOrderItem(orderId: string, analysisId: string): Promise
   try {
     const user = await assertLabStaff();
     const supabase = await labClient();
+    const { data: order } = await supabase.from("lab_orders").select("status").eq("id", orderId).maybeSingle();
+    const { data: report } = await supabase.from("lab_reports").select("status").eq("order_id", orderId).maybeSingle();
+    if (!order || !canEditOrderResults(order.status, report?.status)) {
+      return { status: "error", message: "La solicitud o el informe ya está cerrado; no se pueden cambiar análisis." };
+    }
 
     const { data: analysis } = await supabase
       .from("clinical_analyses")
@@ -318,7 +324,12 @@ export async function removeOrderItem(orderId: string, itemId: string): Promise<
   try {
     await assertLabStaff();
     const supabase = await labClient();
-    const { error } = await supabase.from("lab_order_items").delete().eq("id", itemId);
+    const { data: order } = await supabase.from("lab_orders").select("status").eq("id", orderId).maybeSingle();
+    const { data: report } = await supabase.from("lab_reports").select("status").eq("order_id", orderId).maybeSingle();
+    if (!order || !canEditOrderResults(order.status, report?.status)) {
+      return { status: "error", message: "La solicitud o el informe ya está cerrado; no se pueden quitar análisis." };
+    }
+    const { error } = await supabase.from("lab_order_items").delete().eq("id", itemId).eq("order_id", orderId);
     if (error) return { status: "error", message: GENERIC_ERROR };
     revalidatePath(`/laboratorio/solicitudes/${orderId}`);
     return { status: "success" };

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getOrderWithDetails, getAvailableAnalysesForOrder } from "@/lib/lab/queries";
 import { calculateAge } from "@/lib/lab/shared";
-import { evaluateOrderCompletion } from "@/lib/lab/workflow";
+import { evaluateOrderCompletion, canEditOrderResults } from "@/lib/lab/workflow";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { StatusBadge } from "@/components/lab/StatusBadge";
@@ -22,6 +22,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { order, patient, sample, items, report } = details;
   const availableAnalyses = await getAvailableAnalysesForOrder(id);
   const completion = evaluateOrderCompletion(items.map((item) => ({ resultStatus: item.lab_results?.status ?? null })));
+  const canEditResults = canEditOrderResults(order.status, report?.status);
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,12 +97,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           {items.length === 0 ? (
             <EmptyState icon={ClipboardList} title="Sin análisis agregados todavía." />
           ) : (
-            items.map((item) => <ResultEntry key={item.id} orderId={id} item={item} />)
+            items.map((item) => <ResultEntry key={item.id} orderId={id} item={item} canEdit={canEditResults} />)
           )}
         </div>
 
         <div className="mt-4">
-          <AddAnalysisForm orderId={id} availableAnalyses={availableAnalyses} />
+          {canEditResults ? (
+            <AddAnalysisForm orderId={id} availableAnalyses={availableAnalyses} />
+          ) : (
+            <p className="rounded-lg border border-border bg-surface-muted p-3 text-sm text-text-muted">
+              Esta solicitud o informe está cerrado. Los resultados se muestran en modo de solo lectura.
+            </p>
+          )}
         </div>
       </div>
 
