@@ -9,6 +9,7 @@ export const NAV_LINKS = [
   { href: "/laboratorio", label: "Laboratorio" },
   { href: "/labdex-ai", label: "LABDEX AI" },
   { href: "/calculadoras", label: "Calculadoras" },
+  { href: "/reto-diario", label: "Reto diario" },
   { href: "/estudio", label: "Estudio" },
 ];
 
@@ -48,3 +49,4 @@ export function Navigation({
     </nav>
   );
 }
+
