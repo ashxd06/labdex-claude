@@ -21,7 +21,8 @@ export interface LearningCard {
 
 type Resource = {
   id: string;
-  name: string;
+  name?: string;
+  scientific_name?: string;
   slug: string;
   description?: string | null;
   [key: string]: unknown;
@@ -81,6 +82,7 @@ function makeCards(key: keyof typeof FIELD_QUESTIONS, topic: string, rows: Resou
     FIELD_QUESTIONS[key].flatMap(({ label, prompt }) => {
       const value = row[label];
       if (typeof value !== "string" || value.trim().length < 3) return [];
+      const resourceName = row.name ?? row.scientific_name ?? "Ficha de laboratorio";
       const kindSlug = key === "microorganisms"
         ? KIND_VALUE_TO_SLUG[String(row.kind) as keyof typeof KIND_VALUE_TO_SLUG] || "bacterias"
         : null;
@@ -88,15 +90,15 @@ function makeCards(key: keyof typeof FIELD_QUESTIONS, topic: string, rows: Resou
       return [{
         id: `${key}:${row.id}:${label}`,
         topic,
-        title: row.name,
+        title: resourceName,
         prompt,
         answer: value.trim(),
-        explanation: row.description?.trim() || `Respuesta tomada de la ficha publicada de ${row.name}.`,
+        explanation: row.description?.trim() || `Respuesta tomada de la ficha publicada de ${resourceName}.`,
         href: `/contenido/${slugPath}`,
         ...(key === "microorganisms" && row.morphology && row.gram_stain
           ? {
-              casePrompt: `Caso educativo: en una práctica observas un microorganismo descrito como «${String(row.gram_stain)}» y con esta morfología: «${String(row.morphology)}». ¿Qué ficha de LABDEX consultarías para estudiar estos hallazgos?`,
-              caseAnswer: `${row.name}. Revisa la tinción de Gram y morfología completas en su ficha; estos datos orientan el estudio académico, no establecen un diagnóstico.`,
+              casePrompt: `Caso educativo: en una práctica observas un microorganismo con tinción de Gram «${String(row.gram_stain)}» y esta morfología: «${String(row.morphology)}». ¿Qué ficha de LABDEX consultarías para estudiar estos hallazgos?`,
+              caseAnswer: `${resourceName}. Revisa la tinción de Gram y morfología completas en su ficha; estos datos orientan el estudio académico, no establecen un diagnóstico.`,
             }
           : {}),
       }];
