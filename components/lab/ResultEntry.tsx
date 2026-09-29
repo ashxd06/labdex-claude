@@ -13,7 +13,7 @@ import type { OrderItemWithDetails } from "@/lib/lab/queries";
 
 const initialState = { status: "idle" as const };
 
-export function ResultEntry({ orderId, item }: { orderId: string; item: OrderItemWithDetails }) {
+export function ResultEntry({ orderId, item, canEdit }: { orderId: string; item: OrderItemWithDetails; canEdit: boolean }) {
   const analysis = item.clinical_analyses;
   const result = item.lab_results;
   const action = saveResult.bind(null, orderId, item.id);
@@ -46,33 +46,36 @@ export function ResultEntry({ orderId, item }: { orderId: string; item: OrderIte
         <div className="flex items-center gap-2">
           {result && <StatusBadge status={result.status} />}
           {result?.flag && <ResultFlag flag={result.flag} />}
-          <button
+          {canEdit && <button
             onClick={handleRemove}
             disabled={removing}
             aria-label="Quitar análisis"
             className="rounded-md p-1.5 text-text-muted hover:bg-danger-soft hover:text-danger disabled:opacity-50"
           >
             <X className="size-4" />
-          </button>
+          </button>}
         </div>
       </div>
 
       <form action={formAction} className="mt-3 flex flex-col gap-3">
         {item.result_type === "cuantitativo" && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <FieldInput label="Resultado" name="result_value" defaultValue={result?.result_value ?? ""} />
+            <FieldInput label="Resultado" name="result_value" defaultValue={result?.result_value ?? ""} disabled={!canEdit} type="number" />
             <FieldInput
               label="Unidad"
               name="unit"
               defaultValue={result?.unit ?? analysis.unit ?? ""}
+              disabled={!canEdit}
             />
             <FieldInput
               label="Valor de referencia"
               name="reference_range_text"
               defaultValue={result?.reference_range_text ?? analysis.reference_range ?? ""}
+              disabled={!canEdit}
             />
-            <input type="hidden" name="range_min" value="" />
-            <input type="hidden" name="range_max" value="" />
+            <FieldInput label="Mínimo numérico" name="range_min" defaultValue="" disabled={!canEdit} type="number" />
+            <FieldInput label="Máximo numérico" name="range_max" defaultValue="" disabled={!canEdit} type="number" />
+            <p className="text-xs text-text-faint sm:col-span-3">Completa ambos límites para calcular bajo, normal o alto. El rango no se deduce automáticamente del texto.</p>
           </div>
         )}
 
@@ -82,6 +85,7 @@ export function ResultEntry({ orderId, item }: { orderId: string; item: OrderIte
             <select
               name="result_value"
               defaultValue={result?.result_value ?? ""}
+              disabled={!canEdit}
               className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
             >
               <option value="" disabled>
@@ -102,6 +106,7 @@ export function ResultEntry({ orderId, item }: { orderId: string; item: OrderIte
             <select
               name="result_value"
               defaultValue={result?.result_value ?? ""}
+              disabled={!canEdit}
               className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
             >
               <option value="" disabled>
@@ -123,6 +128,7 @@ export function ResultEntry({ orderId, item }: { orderId: string; item: OrderIte
               name="result_value"
               defaultValue={result?.result_value ?? ""}
               rows={3}
+              disabled={!canEdit}
               className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
             />
           </div>
@@ -134,13 +140,14 @@ export function ResultEntry({ orderId, item }: { orderId: string; item: OrderIte
             name="observation"
             defaultValue={result?.observation ?? ""}
             rows={2}
+            disabled={!canEdit}
             className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
           />
         </div>
 
         {state.status === "error" && <p className="text-sm text-danger">{state.message}</p>}
 
-        <div className="flex items-center gap-2">
+        {canEdit && <div className="flex items-center gap-2">
           <Button type="submit" size="sm" loading={pending}>
             Guardar resultado
           </Button>
@@ -149,7 +156,8 @@ export function ResultEntry({ orderId, item }: { orderId: string; item: OrderIte
               <CheckCircle2 className="size-3.5" /> Validar
             </Button>
           )}
-        </div>
+        </div>}
+        {!canEdit && <p className="text-xs text-text-faint">Edición bloqueada para conservar el informe validado.</p>}
       </form>
     </div>
   );
@@ -159,16 +167,24 @@ function FieldInput({
   label,
   name,
   defaultValue,
+  disabled = false,
+  type = "text",
 }: {
   label: string;
   name: string;
   defaultValue: string;
+  disabled?: boolean;
+  type?: "text" | "number";
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-medium text-text-muted">{label}</label>
       <input
         name={name}
+        type={type}
+        inputMode={type === "number" ? "decimal" : undefined}
+        step={type === "number" ? "any" : undefined}
+        disabled={disabled}
         defaultValue={defaultValue}
         className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
       />
