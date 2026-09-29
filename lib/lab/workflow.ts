@@ -146,7 +146,9 @@ export function evaluateReportIssuance(orderStatus: OrderStatus): ReportIssuance
 
 /** Permite cambios de resultados solo mientras la solicitud y su informe sigan editables. */
 export function canEditOrderResults(orderStatus: string, reportStatus?: string | null): boolean {
-  return orderStatus !== "completada" && orderStatus !== "cancelada" && reportStatus !== "emitido" && reportStatus !== "anulado";
+  const openOrder = orderStatus === "pendiente" || orderStatus === "en_proceso";
+  const editableReport = reportStatus == null || reportStatus === "borrador";
+  return openOrder && editableReport;
 }
 
 /** Interpreta únicamente números completos y rangos explícitos, sin inferir desde texto libre. */
