@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Upload, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -31,9 +32,14 @@ export function FileUploadField({
 }: FileUploadFieldProps) {
   const action = uploadResourceFile.bind(null, resourceKey, id, fieldKey);
   const [state, formAction, pending] = useActionState(action, initialState);
+  const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state.status === "success") router.refresh();
+  }, [router, state.status]);
 
   const url = getPublicUrl(bucket, currentPath);
   const isImage = bucket !== "documents" || /\.(png|jpe?g|webp)$/i.test(currentPath ?? "");
@@ -118,3 +124,4 @@ export function FileUploadField({
     </div>
   );
 }
+
