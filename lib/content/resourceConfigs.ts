@@ -76,7 +76,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     slugField: "slug",
     hasCategory: true,
     adminPath: "/admin/microorganismos",
-    listColumns: ["scientific_name", "kind", "gram_stain", "is_active"],
+    listColumns: ["scientific_name", "kind", "gram_stain", "status", "is_active"],
     fields: [
       // Información general
       { key: "scientific_name", label: "Nombre científico", type: "text", required: true, uppercaseDisplay: true, section: "Información general" },
@@ -84,13 +84,13 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
       { key: "slug", label: "Slug", type: "text", required: true, section: "Información general" },
       { key: "kind", label: "Tipo", type: "select", required: true, options: MICROORGANISM_KIND_OPTIONS, section: "Información general" },
       { key: "category_id", label: "Categoría", type: "text", section: "Información general" },
-      { key: "description", label: "Descripción", type: "textarea", section: "Información general" },
+      { key: "description", label: "Resumen", type: "textarea", hint: "Vista general breve: qué es y por qué importa.", section: "Información general" },
 
       // Clasificación
       { key: "classification", label: "Clasificación taxonómica", type: "textarea", section: "Clasificación" },
 
       // Morfología
-      { key: "morphology", label: "Morfología", type: "textarea", section: "Morfología" },
+      { key: "morphology", label: "Descripción microscópica", type: "textarea", hint: "Describe el aspecto y rasgos observables al microscopio; los campos siguientes guardan los datos puntuales.", section: "Morfología" },
       { key: "gram_stain", label: "Tinción de Gram", type: "text", hint: "Ej. Positivo, Negativo, No aplica", section: "Morfología" },
       { key: "shape", label: "Forma", type: "text", section: "Morfología" },
       { key: "arrangement", label: "Agrupación", type: "text", section: "Morfología" },
@@ -102,13 +102,16 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
       { key: "culture", label: "Cultivo", type: "textarea", section: "Cultivo" },
 
       // Importancia clínica
-      { key: "pathogenicity", label: "Patogenicidad", type: "textarea", section: "Importancia clínica" },
-      { key: "clinical_importance", label: "Importancia clínica", type: "textarea", section: "Importancia clínica" },
+      { key: "pathogenicity", label: "Factores de virulencia", type: "textarea", hint: "Toxinas, enzimas, adhesinas y mecanismos de daño; no repitas aquí la lista de enfermedades.", section: "Importancia clínica" },
+      { key: "antimicrobial_resistance", label: "Resistencia antimicrobiana", type: "textarea", hint: "Fenotipos o mecanismos relevantes y contexto (p. ej., SARM). Evita generalizar a todas las cepas.", section: "Importancia clínica" },
+      { key: "clinical_importance", label: "Enfermedades asociadas", type: "textarea", hint: "Cuadros clínicos relacionados, distinguiendo colonización de infección cuando aplique.", section: "Importancia clínica" },
       { key: "transmission", label: "Transmisión", type: "textarea", section: "Importancia clínica" },
 
       // Diagnóstico
       { key: "diagnosis", label: "Diagnóstico", type: "textarea", section: "Diagnóstico" },
       { key: "prevention", label: "Prevención", type: "textarea", section: "Diagnóstico" },
+
+      { key: "source_references", label: "Fuentes y referencias", type: "textarea", hint: "Incluye institución/autor, título, año y URL o DOI. Verifica que la fuente respalde la ficha.", section: "Referencias" },
 
       // Imágenes
       { key: "microscopy_image_path", label: "Imagen de microscopía", type: "file", bucket: "microorganism-images", section: "Imágenes" },
@@ -127,7 +130,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     slugField: "slug",
     hasCategory: false,
     adminPath: "/admin/categorias",
-    listColumns: ["name", "type", "is_active"],
+    listColumns: ["name", "parent_name", "type", "status", "is_active"],
     fields: [
       { key: "name", label: "Nombre", type: "text", required: true },
       { key: "slug", label: "Slug", type: "text", required: true, hint: "Identificador único para la URL, ej. microbiologia" },
@@ -135,6 +138,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
       { key: "icon", label: "Icono (nombre lucide-react)", type: "text", hint: "Ej. microscope, droplets, flask-conical" },
       { key: "type", label: "Tipo/agrupador", type: "text" },
       { key: "display_order", label: "Orden", type: "text" },
+      { key: "parent_id", label: "Categoría superior", type: "text", hint: "Opcional. Por ejemplo: Microbiología → Bacterias Gram positivas." },
       ...commonStatusFields,
     ],
   },
@@ -148,7 +152,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     slugField: "slug",
     hasCategory: false,
     adminPath: "/admin/medios",
-    listColumns: ["name", "type", "is_active"],
+    listColumns: ["name", "type", "status", "is_active"],
     fields: [
       { key: "name", label: "Nombre", type: "text", required: true },
       { key: "slug", label: "Slug", type: "text", required: true },
@@ -164,6 +168,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
       { key: "educational_image_path", label: "Imagen educativa", type: "file", bucket: "educational-images", section: "Aprendizaje visual" },
       { key: "educational_image_caption", label: "Descripción de la imagen", type: "textarea", hint: "Explica brevemente qué representa la imagen.", section: "Aprendizaje visual" },
       { key: "educational_image_observation", label: "Pista de observación", type: "textarea", hint: "La IA puede proponerla a partir de la ficha; revísala frente a la imagen antes de guardar.", section: "Aprendizaje visual" },
+      { key: "source_references", label: "Fuentes y referencias", type: "textarea", hint: "Institución/autor, título, año y URL o DOI.", section: "Referencias" },
       ...commonStatusFields,
     ],
   },
@@ -177,7 +182,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     slugField: "slug",
     hasCategory: true,
     adminPath: "/admin/pruebas",
-    listColumns: ["name", "is_active"],
+    listColumns: ["name", "status", "is_active"],
     fields: [
       { key: "name", label: "Nombre", type: "text", required: true },
       { key: "slug", label: "Slug", type: "text", required: true },
@@ -192,6 +197,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
       { key: "educational_image_path", label: "Imagen educativa", type: "file", bucket: "educational-images", section: "Aprendizaje visual" },
       { key: "educational_image_caption", label: "Descripción de la imagen", type: "textarea", hint: "Explica brevemente qué representa la imagen.", section: "Aprendizaje visual" },
       { key: "educational_image_observation", label: "Pista de observación", type: "textarea", hint: "La IA puede proponerla a partir de la ficha; revísala frente a la imagen antes de guardar.", section: "Aprendizaje visual" },
+      { key: "source_references", label: "Fuentes y referencias", type: "textarea", hint: "Institución/autor, título, año y URL o DOI.", section: "Referencias" },
       ...commonStatusFields,
     ],
   },
@@ -205,7 +211,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     slugField: "slug",
     hasCategory: true,
     adminPath: "/admin/procedimientos",
-    listColumns: ["name", "is_active"],
+    listColumns: ["name", "status", "is_active"],
     fields: [
       { key: "name", label: "Nombre", type: "text", required: true },
       { key: "slug", label: "Slug", type: "text", required: true },
@@ -221,6 +227,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
       { key: "educational_image_path", label: "Imagen educativa", type: "file", bucket: "educational-images", section: "Aprendizaje visual" },
       { key: "educational_image_caption", label: "Descripción de la imagen", type: "textarea", hint: "Explica brevemente qué representa la imagen.", section: "Aprendizaje visual" },
       { key: "educational_image_observation", label: "Pista de observación", type: "textarea", hint: "La IA puede proponerla a partir de la ficha; revísala frente a la imagen antes de guardar.", section: "Aprendizaje visual" },
+      { key: "source_references", label: "Fuentes y referencias", type: "textarea", hint: "Institución/autor, título, año y URL o DOI.", section: "Referencias" },
       ...commonStatusFields,
     ],
   },
@@ -234,7 +241,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     slugField: "slug",
     hasCategory: true,
     adminPath: "/admin/analisis",
-    listColumns: ["name", "sample_type", "is_active"],
+    listColumns: ["name", "sample_type", "status", "is_active"],
     fields: [
       { key: "name", label: "Nombre", type: "text", required: true, uppercaseDisplay: true },
       { key: "slug", label: "Slug", type: "text", required: true },
@@ -250,6 +257,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
       { key: "educational_image_path", label: "Imagen educativa", type: "file", bucket: "educational-images", section: "Aprendizaje visual" },
       { key: "educational_image_caption", label: "Descripción de la imagen", type: "textarea", hint: "Explica brevemente qué representa la imagen.", section: "Aprendizaje visual" },
       { key: "educational_image_observation", label: "Pista de observación", type: "textarea", hint: "La IA puede proponerla a partir de la ficha; revísala frente a la imagen antes de guardar.", section: "Aprendizaje visual" },
+      { key: "source_references", label: "Fuentes y referencias", type: "textarea", hint: "Institución/autor, título, año y URL o DOI.", section: "Referencias" },
       ...commonStatusFields,
     ],
   },
@@ -263,7 +271,7 @@ export const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     slugField: "slug",
     hasCategory: false,
     adminPath: "/admin/documentos",
-    listColumns: ["title", "category", "is_active"],
+    listColumns: ["title", "category", "status", "is_active"],
     fields: [
       { key: "title", label: "Título", type: "text", required: true },
       { key: "slug", label: "Slug", type: "text", required: true },
@@ -284,3 +292,4 @@ export function getResourceConfig(key: string): ResourceConfig {
   }
   return config;
 }
+

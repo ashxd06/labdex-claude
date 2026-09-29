@@ -18,7 +18,7 @@ export default async function ContenidoPage() {
       orderBy: "display_order",
       ascending: true,
     }),
-    countResourceRowsResult("microorganisms"),
+    countResourceRowsResult("microorganisms", true),
   ]);
 
   // Microbiología tiene tabla propia (microorganisms); el resto de
@@ -28,7 +28,7 @@ export default async function ContenidoPage() {
   // Microbiología tiene ruta y tabla propias: mantener su acceso visible
   // aunque todavía no exista una fila de categoría activa en Supabase.
   const otherCategories = categories.filter(
-    (category) => category.type !== "microbiologia" && category.slug !== "microbiologia"
+    (category) => !category.parent_id && category.type !== "microbiologia" && category.slug !== "microbiologia"
   );
   const nonMicrobiologiaIds = otherCategories.map((category) => category.id);
   const categoryCountsResult = await getCategoryContentCounts(nonMicrobiologiaIds);
@@ -89,3 +89,4 @@ export default async function ContenidoPage() {
     </div>
   );
 }
+

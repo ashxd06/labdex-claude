@@ -46,13 +46,13 @@ export async function getRelationsData(microorganismId: string) {
 
   const [allMedia, allTests, allProcedures, linkedMediaRaw, linkedTestsRaw, linkedProceduresRaw] =
     await Promise.all([
-      supabase.from("culture_media").select("id, name, slug").order("name") as unknown as Promise<{
+      supabase.from("culture_media").select("id, name, slug").eq("is_active", true).eq("status", "published").order("name") as unknown as Promise<{
         data: CultureMedia[] | null;
       }>,
-      supabase.from("laboratory_tests").select("id, name, slug").order("name") as unknown as Promise<{
+      supabase.from("laboratory_tests").select("id, name, slug").eq("is_active", true).eq("status", "published").order("name") as unknown as Promise<{
         data: LaboratoryTest[] | null;
       }>,
-      supabase.from("procedures").select("id, name, slug").order("name") as unknown as Promise<{
+      supabase.from("procedures").select("id, name, slug").eq("is_active", true).eq("status", "published").order("name") as unknown as Promise<{
         data: Procedure[] | null;
       }>,
       supabase
@@ -192,3 +192,4 @@ export async function removeProcedureRelation(microorganismId: string, procedure
     .eq("procedure_id", procedureId);
   revalidatePath(`/admin/microorganismos/${microorganismId}`);
 }
+

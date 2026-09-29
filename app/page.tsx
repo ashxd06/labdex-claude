@@ -39,12 +39,12 @@ const FEATURED_CATEGORY_SLUGS = ["microbiologia", "hematologia", "bioquimica"] a
 
 export default async function HomePage() {
   const [microorganismCount, mediaCount, testCount, procedureCount, analysisCount, documentCount, categoryIdsResult] = await Promise.all([
-    countResourceRowsResult("microorganisms"),
-    countResourceRowsResult("culture_media"),
-    countResourceRowsResult("laboratory_tests"),
-    countResourceRowsResult("procedures"),
-    countResourceRowsResult("clinical_analyses"),
-    countResourceRowsResult("documents"),
+    countResourceRowsResult("microorganisms", true),
+    countResourceRowsResult("culture_media", true),
+    countResourceRowsResult("laboratory_tests", true),
+    countResourceRowsResult("procedures", true),
+    countResourceRowsResult("clinical_analyses", true),
+    countResourceRowsResult("documents", true),
     getCategoryIdsBySlug([...FEATURED_CATEGORY_SLUGS]),
   ]);
   const knownCategoryIds = Object.values(categoryIdsResult.map);

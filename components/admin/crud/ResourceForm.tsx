@@ -16,7 +16,7 @@ const initialState: CrudActionState = { status: "idle" };
 interface ResourceFormProps {
   resourceKey: string;
   record?: Record<string, unknown>;
-  categories?: { id: string; name: string }[];
+  categories?: { id: string; name: string; slug?: string; parent_id?: string | null }[];
   /** Si es false, no se muestra el Asistente LABDEX (p. ej. para un
    * administrador sin ese permiso específico — hoy siempre es visible para
    * cualquier admin, ver ContentAssistantPanel/actions.ts para el gate real
@@ -56,6 +56,11 @@ export function ResourceForm({ resourceKey, record, categories, showAssistant = 
 
       <Card>
         <CardBody>
+          {isEdit && record?.status === "published" && (
+            <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+              Esta ficha está publicada. “Guardar borrador” conserva la versión pública sin cambios; usa “Publicar cambios” cuando hayas revisado todo.
+            </div>
+          )}
           <form id={formId} action={formAction} className="flex flex-col gap-4">
             {config.fields
               .filter((f) => f.type !== "file")
@@ -80,19 +85,22 @@ export function ResourceForm({ resourceKey, record, categories, showAssistant = 
                     );
                   }
 
-                  if (field.key === "category_id" && categories) {
+                  if ((field.key === "category_id" || field.key === "parent_id") && categories) {
+                    const options = field.key === "parent_id"
+                      ? categories.filter((cat) => !cat.parent_id && cat.id !== record?.id)
+                      : categories;
                     return (
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-text-muted">Categoría</label>
+                        <label className="text-sm font-medium text-text-muted">{field.label}</label>
                         <select
-                          name="category_id"
+                          name={field.key}
                           defaultValue={String(rawValue ?? "")}
                           className="rounded-md border border-border bg-surface px-3.5 py-2.5 text-sm text-text outline-none focus:border-primary"
                         >
-                          <option value="">Sin categoría</option>
-                          {categories.map((cat) => (
+                          <option value="">{field.key === "parent_id" ? "Sin categoría superior" : "Sin categoría"}</option>
+                          {options.map((cat) => (
                             <option key={cat.id} value={cat.id}>
-                              {cat.name}
+                              {cat.parent_id ? `${categories.find((parent) => parent.id === cat.parent_id)?.name ?? ""} / ${cat.name}` : cat.name}
                             </option>
                           ))}
                         </select>
@@ -183,9 +191,12 @@ export function ResourceForm({ resourceKey, record, categories, showAssistant = 
               </p>
             )}
 
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" loading={pending}>
-                {isEdit ? "Guardar cambios" : `Crear ${config.labelSingular.toLowerCase()}`}
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button type="submit" name="submit_intent" value="draft" loading={pending} variant="secondary">
+                Guardar borrador
+              </Button>
+              <Button type="submit" name="submit_intent" value="publish" loading={pending}>
+                {isEdit && record?.status === "published" ? "Publicar cambios" : "Publicar"}
               </Button>
             </div>
           </form>
@@ -222,3 +233,4 @@ export function ResourceForm({ resourceKey, record, categories, showAssistant = 
     </div>
   );
 }
+

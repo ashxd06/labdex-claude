@@ -15,7 +15,7 @@ export const revalidate = 0;
 
 async function loadItem(slug: string) {
   const item = await getResourceRowBySlug<LaboratoryTest>("laboratory_tests", slug);
-  if (!item || !item.is_active) return null;
+  if (!item || !item.is_active || item.status !== "published") return null;
   return item;
 }
 
@@ -92,3 +92,4 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     </div>
   );
 }
+

@@ -28,6 +28,7 @@ export interface Category extends ContentFields {
   icon: string | null;
   type: string | null;
   display_order: number;
+  parent_id: string | null;
 }
 
 export interface Microorganism extends ContentFields {
@@ -52,6 +53,8 @@ export interface Microorganism extends ContentFields {
   transmission: string | null;
   diagnosis: string | null;
   prevention: string | null;
+  antimicrobial_resistance: string | null;
+  source_references: string | null;
   microscopy_image_path: string | null;
   culture_image_path: string | null;
   is_sample_data: boolean;
@@ -190,3 +193,4 @@ export interface Database {
     };
   };
 }
+

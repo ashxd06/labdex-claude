@@ -10,6 +10,7 @@ import { KIND_SLUG_TO_VALUE, KIND_VALUE_TO_LABEL } from "@/lib/content/kindSlugs
 import { MicroorganismCard } from "@/components/content/MicroorganismCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { Microorganism } from "@/lib/supabase/types";
+import { getActiveCategories } from "@/lib/content/getCategories";
 
 export const revalidate = 0;
 
@@ -20,13 +21,18 @@ export default async function MicroorganismKindPage({
   searchParams,
 }: {
   params: Promise<{ kind: string }>;
-  searchParams: Promise<{ q?: string; gram?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; gram?: string; page?: string; categoria?: string }>;
 }) {
   const { kind: kindSlug } = await params;
   const kind = KIND_SLUG_TO_VALUE[kindSlug];
   if (!kind) notFound();
 
-  const { q, gram, page } = await searchParams;
+  const { q, gram, page, categoria } = await searchParams;
+  const categories = await getActiveCategories();
+  const rootCategory = categories.find((item) => item.slug === "microbiologia");
+  const category = categoria
+    ? categories.find((item) => item.slug === categoria && item.parent_id === rootCategory?.id)
+    : undefined;
   const currentPage = Number.parseInt(page ?? "1", 10) || 1;
 
   const { rows: allRows } = await listResourceRowsPaged<Microorganism>("microorganisms", {
@@ -47,10 +53,11 @@ export default async function MicroorganismKindPage({
       ? allRows.filter((m) => (m.gram_stain || "").toLowerCase().startsWith(gram.toLowerCase()))
       : allRows;
 
-  const total = filtered.length;
+  const categorized = category ? filtered.filter((item) => item.category_id === category.id) : filtered;
+  const total = categorized.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
-  const items = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const items = categorized.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const showGramFilter = kind === "bacteria";
 
@@ -58,6 +65,7 @@ export default async function MicroorganismKindPage({
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (gram) params.set("gram", gram);
+    if (categoria) params.set("categoria", categoria);
     params.set("page", String(targetPage));
     return `/contenido/microbiologia/${kindSlug}?${params.toString()}`;
   }
@@ -74,9 +82,11 @@ export default async function MicroorganismKindPage({
             { label: KIND_VALUE_TO_LABEL[kind] },
           ]}
         />
-        <h1 className="mt-3 text-2xl font-semibold text-text">{KIND_VALUE_TO_LABEL[kind]}</h1>
+        <h1 className="mt-3 text-2xl font-semibold text-text">{category ? `${KIND_VALUE_TO_LABEL[kind]} · ${category.name}` : KIND_VALUE_TO_LABEL[kind]}</h1>
 
         <form className="mt-6 flex flex-wrap items-center gap-3">
+          {categoria && <input type="hidden" name="categoria" value={categoria} />}
+          {gram && <input type="hidden" name="gram" value={gram} />}
           <label className="flex w-full max-w-sm items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 focus-within:border-primary">
             <Search className="size-4 text-text-muted" />
             <input
@@ -99,6 +109,7 @@ export default async function MicroorganismKindPage({
                   key={opt.value}
                   href={`/contenido/microbiologia/${kindSlug}?${new URLSearchParams({
                     ...(q ? { q } : {}),
+                    ...(categoria ? { categoria } : {}),
                     gram: opt.value,
                   }).toString()}`}
                   className={`rounded px-3 py-1.5 text-sm transition-colors ${
@@ -137,3 +148,4 @@ export default async function MicroorganismKindPage({
     </div>
   );
 }
+

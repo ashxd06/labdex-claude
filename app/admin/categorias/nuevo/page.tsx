@@ -1,5 +1,8 @@
 import { ResourceForm } from "@/components/admin/crud/ResourceForm";
+import { getActiveCategories } from "@/lib/content/getCategories";
 
-export default function Page() {
-  return <ResourceForm resourceKey="categories" />;
+export default async function Page() {
+  const categories = await getActiveCategories();
+  return <ResourceForm resourceKey="categories" categories={categories} />;
 }
+

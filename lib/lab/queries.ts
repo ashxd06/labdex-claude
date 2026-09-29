@@ -272,7 +272,7 @@ export async function getOrderWithDetails(orderId: string) {
 export async function getAvailableAnalysesForOrder(orderId: string): Promise<ClinicalAnalysis[]> {
   const supabase = await labClient();
   const [{ data: allAnalyses }, { data: existingItems }] = await Promise.all([
-    supabase.from("clinical_analyses").select("*").eq("is_active", true).order("name"),
+    supabase.from("clinical_analyses").select("*").eq("is_active", true).eq("status", "published").order("name"),
     supabase.from("lab_order_items").select("analysis_id").eq("order_id", orderId),
   ]);
 
@@ -365,3 +365,4 @@ export async function getLabSettings(): Promise<LabSettings> {
     }
   );
 }
+

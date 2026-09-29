@@ -13,6 +13,7 @@ import { SampleDataBadge } from "@/components/content/SampleDataBadge";
 import { AskLabdexAiButton } from "@/components/labdex-ai/AskLabdexAiButton";
 import { Badge } from "@/components/ui/Badge";
 import type { Microorganism } from "@/lib/supabase/types";
+import { getActiveCategories } from "@/lib/content/getCategories";
 
 export const revalidate = 0;
 
@@ -31,6 +32,8 @@ const SECTION_FIELDS: { key: keyof Microorganism; label: string }[] = [
   { key: "transmission", label: "Transmisión" },
   { key: "diagnosis", label: "Diagnóstico" },
   { key: "prevention", label: "Prevención" },
+  { key: "antimicrobial_resistance", label: "Resistencia antimicrobiana" },
+  { key: "source_references", label: "Fuentes y referencias" },
 ];
 
 type PageParams = { kind: string; slug: string };
@@ -41,7 +44,7 @@ async function loadItem(params: Promise<PageParams>) {
   if (!kind) return null;
 
   const item = await getResourceRowBySlug<Microorganism>("microorganisms", slug);
-  if (!item || item.kind !== kind || !item.is_active) return null;
+  if (!item || item.kind !== kind || !item.is_active || item.status !== "published") return null;
 
   return { item, kind, kindSlug };
 }
@@ -77,8 +80,9 @@ export default async function MicroorganismDetailPage({
   const result = await loadItem(params);
   if (!result) notFound();
   const { item, kind, kindSlug } = result;
-
-  const { linkedMedia, linkedTests, linkedProcedures } = await getRelationsData(item.id);
+  const [relations, categories] = await Promise.all([getRelationsData(item.id), getActiveCategories()]);
+  const category = categories.find((entry) => entry.id === item.category_id);
+  const { linkedMedia, linkedTests, linkedProcedures } = relations;
 
   const microscopyUrl = getPublicUrl("microorganism-images", item.microscopy_image_path);
   const cultureUrl = getPublicUrl("microorganism-images", item.culture_image_path);
@@ -104,8 +108,9 @@ export default async function MicroorganismDetailPage({
             </h1>
             {item.common_name && <p className="mt-1 text-text-muted">{item.common_name}</p>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge tone="primary">{KIND_VALUE_TO_LABEL[kind]}</Badge>
+            {category && <Badge tone="neutral">{category.name}</Badge>}
             <SampleDataBadge show={item.is_sample_data} />
           </div>
         </div>
@@ -216,3 +221,4 @@ function RelatedList({
     </div>
   );
 }
+

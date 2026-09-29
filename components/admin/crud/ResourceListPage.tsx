@@ -22,6 +22,8 @@ const COLUMN_LABELS: Record<string, string> = {
   category: "Categoría",
   sample_type: "Tipo de muestra",
   is_active: "Estado",
+  status: "Publicación",
+  parent_name: "Categoría superior",
 };
 
 export function ResourceListPage({ resourceKey, rows, searchQuery }: ResourceListPageProps) {
@@ -125,7 +127,10 @@ export function ResourceListPage({ resourceKey, rows, searchQuery }: ResourceLis
                   <p className="font-medium text-text">
                     {String(row[config.titleField] ?? "")}
                   </p>
-                  {renderCell(row, "is_active")}
+                  <div className="flex flex-wrap gap-2">
+                    {renderCell(row, "status")}
+                    {renderCell(row, "is_active")}
+                  </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <Link href={`${config.adminPath}/${row.id}`}>
@@ -149,6 +154,11 @@ export function ResourceListPage({ resourceKey, rows, searchQuery }: ResourceLis
 }
 
 function renderCell(row: Record<string, unknown>, col: string) {
+  if (col === "status") {
+    const status = String(row.status ?? "draft");
+    const label = status === "published" ? "Publicado" : status === "archived" ? "Archivado" : "Borrador";
+    return <Badge tone={status === "published" ? "success" : "neutral"}>{label}</Badge>;
+  }
   if (col === "is_active") {
     return row.is_active ? (
       <Badge tone="success">Activo</Badge>
@@ -160,3 +170,4 @@ function renderCell(row: Record<string, unknown>, col: string) {
   if (value === null || value === undefined || value === "") return "—";
   return String(value);
 }
+

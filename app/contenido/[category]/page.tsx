@@ -18,7 +18,7 @@ export default async function CategoryDetailPage({
 }) {
   const { category: slug } = await params;
   const category = await getResourceRowBySlug<Category>("categories", slug);
-  if (!category || !category.is_active) notFound();
+  if (!category || !category.is_active || category.status !== "published") notFound();
 
   const [tests, procedures, analyses] = await Promise.all([
     listResourceRows<LaboratoryTest>("laboratory_tests", { onlyActive: true, categoryId: category.id }),
@@ -107,3 +107,4 @@ function ContentGroup({
     </div>
   );
 }
+

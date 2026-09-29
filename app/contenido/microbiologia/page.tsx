@@ -6,13 +6,16 @@ import { Breadcrumbs } from "@/components/content/Breadcrumbs";
 import { listResourceRows } from "@/lib/content/queries";
 import { KIND_SECTIONS } from "@/lib/content/kindSlugs";
 import type { Microorganism } from "@/lib/supabase/types";
+import { getActiveCategories } from "@/lib/content/getCategories";
 
 export const revalidate = 0;
 
 export default async function MicrobiologiaPage() {
-  const microorganisms = await listResourceRows<Microorganism>("microorganisms", {
+  const [microorganisms, categories] = await Promise.all([listResourceRows<Microorganism>("microorganisms", {
     onlyActive: true,
-  });
+  }), getActiveCategories()]);
+  const root = categories.find((category) => category.slug === "microbiologia");
+  const subcategories = categories.filter((category) => category.parent_id === root?.id);
 
   const countByKind = Object.fromEntries(
     KIND_SECTIONS.map((s) => [s.kind, microorganisms.filter((m) => m.kind === s.kind).length])
@@ -51,8 +54,22 @@ export default async function MicrobiologiaPage() {
             </Link>
           ))}
         </div>
+
+        {subcategories.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-lg font-semibold text-text">Explorar por categorías</h2>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {subcategories.map((category) => (
+                <Link key={category.id} href={`/contenido/microbiologia/bacterias?categoria=${encodeURIComponent(category.slug)}`} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-text-muted hover:border-accent hover:text-accent">
+                  {category.name}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
       <Footer />
     </div>
   );
 }
+

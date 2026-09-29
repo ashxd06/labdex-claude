@@ -107,6 +107,7 @@ export async function createRecord(
     const supabase = await client();
 
     const payload = buildPayload(config.fields, formData);
+    payload.status = formData.get("submit_intent") === "publish" ? "published" : "draft";
 
     const titleValue = String(formData.get(config.titleField) || "").trim();
     if (!titleValue) {
@@ -134,7 +135,7 @@ export async function createRecord(
     revalidatePublicPaths(config.table);
     return {
       status: "success",
-      message: `${config.labelSingular} creado correctamente.`,
+      message: payload.status === "published" ? `${config.labelSingular} publicado.` : `${config.labelSingular} guardado como borrador.`,
       id: data?.id as string | undefined,
     };
   } catch (err) {
@@ -154,6 +155,7 @@ export async function updateRecord(
     const supabase = await client();
 
     const payload = buildPayload(config.fields, formData);
+    const intent = formData.get("submit_intent") === "publish" ? "publish" : "draft";
 
     const titleValue = String(formData.get(config.titleField) || "").trim();
     if (!titleValue) {
@@ -170,6 +172,37 @@ export async function updateRecord(
       payload.updated_by = userData.user.id;
     }
 
+    const { data: current, error: currentError } = await supabase
+      .from(config.table).select("status").eq("id", id).maybeSingle();
+    if (currentError || !current) return { status: "error", message: "No se encontró el registro para actualizar." };
+
+    const { data: existingDraft } = await supabase.from("content_drafts").select("payload")
+      .eq("resource_key", resourceKey).eq("record_id", id).maybeSingle();
+    const stagedPayload = (existingDraft?.payload ?? {}) as Record<string, unknown>;
+
+    if (current.status === "published" && intent === "draft") {
+      const safePayload = Object.fromEntries(
+        Object.entries(payload).filter(([key]) => config.fields.some((field) => field.key === key && field.type !== "file"))
+      );
+      const { error } = await supabase.from("content_drafts").upsert({
+        resource_key: resourceKey,
+        record_id: id,
+        payload: { ...stagedPayload, ...safePayload },
+        updated_by: userData.user?.id ?? null,
+      }, { onConflict: "resource_key,record_id" });
+      if (error) return { status: "error", message: "No se pudo guardar el borrador de cambios." };
+      revalidatePath(config.adminPath);
+      return { status: "success", message: "Cambios guardados como borrador; la ficha pública sigue igual." };
+    }
+
+    if (intent === "publish" && current.status === "published") {
+      Object.assign(payload, stagedPayload);
+      // Los valores escritos en el formulario tienen prioridad sobre el borrador anterior.
+      Object.assign(payload, buildPayload(config.fields, formData));
+      payload[config.slugField] = slugify(rawSlug || titleValue);
+    }
+    payload.status = intent === "publish" ? "published" : "draft";
+
     const { error } = await supabase.from(config.table).update(payload).eq("id", id);
     if (error) {
       if (error.code === "23505") {
@@ -178,9 +211,13 @@ export async function updateRecord(
       return { status: "error", message: "No se pudo actualizar el registro." };
     }
 
+    if (intent === "publish") {
+      await supabase.from("content_drafts").delete().eq("resource_key", resourceKey).eq("record_id", id);
+    }
+
     revalidatePath(config.adminPath);
     revalidatePublicPaths(config.table);
-    return { status: "success", message: `${config.labelSingular} actualizado correctamente.` };
+    return { status: "success", message: intent === "publish" ? `${config.labelSingular} publicado.` : `${config.labelSingular} guardado como borrador.` };
   } catch (err) {
     return { status: "error", message: err instanceof Error ? err.message : "Error inesperado." };
   }
@@ -231,4 +268,5 @@ export async function toggleActive(
     return { status: "error", message: err instanceof Error ? err.message : "Error inesperado." };
   }
 }
+
 

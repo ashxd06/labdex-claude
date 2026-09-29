@@ -14,5 +14,11 @@ export default async function Page({
     orderBy: "display_order",
     ascending: true,
   });
-  return <ResourceListPage resourceKey="categories" rows={rows as unknown as Record<string, unknown>[]} searchQuery={q} />;
+  const names = new Map(rows.map((category) => [category.id, category.name]));
+  const withParent = rows.map((category) => ({
+    ...category,
+    parent_name: category.parent_id ? names.get(category.parent_id) ?? "—" : "—",
+  }));
+  return <ResourceListPage resourceKey="categories" rows={withParent as unknown as Record<string, unknown>[]} searchQuery={q} />;
 }
+

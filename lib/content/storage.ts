@@ -87,10 +87,20 @@ export async function uploadResourceFile(
       return { status: "error", message: "No se pudo subir el archivo." };
     }
 
-    const { error: updateError } = await supabase
-      .from(config.table)
-      .update({ [fieldKey]: path })
-      .eq("id", id);
+    const { data: record } = await supabase.from(config.table).select("status").eq("id", id).maybeSingle();
+    let updateError: { message: string } | null = null;
+    if (record?.status === "published") {
+      const { data: existing } = await supabase.from("content_drafts").select("payload")
+        .eq("resource_key", resourceKey).eq("record_id", id).maybeSingle();
+      const payload = { ...((existing?.payload ?? {}) as Record<string, unknown>), [fieldKey]: path };
+      const result = await supabase.from("content_drafts").upsert({
+        resource_key: resourceKey, record_id: id, payload, updated_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+      }, { onConflict: "resource_key,record_id" });
+      updateError = result.error;
+    } else {
+      const result = await supabase.from(config.table).update({ [fieldKey]: path }).eq("id", id);
+      updateError = result.error;
+    }
 
     if (updateError) {
       return { status: "error", message: "El archivo se subió pero no se pudo enlazar al registro." };
@@ -118,12 +128,21 @@ export async function deleteResourceFile(
     }
 
     const supabase = await client();
-    await supabase.storage.from(fieldConfig.bucket).remove([currentPath]);
-
-    const { error } = await supabase
-      .from(config.table)
-      .update({ [fieldKey]: null })
-      .eq("id", id);
+    const { data: record } = await supabase.from(config.table).select("status").eq("id", id).maybeSingle();
+    let error: { message: string } | null = null;
+    if (record?.status === "published") {
+      const { data: existing } = await supabase.from("content_drafts").select("payload")
+        .eq("resource_key", resourceKey).eq("record_id", id).maybeSingle();
+      const payload = { ...((existing?.payload ?? {}) as Record<string, unknown>), [fieldKey]: null };
+      const result = await supabase.from("content_drafts").upsert({
+        resource_key: resourceKey, record_id: id, payload, updated_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+      }, { onConflict: "resource_key,record_id" });
+      error = result.error;
+    } else {
+      await supabase.storage.from(fieldConfig.bucket).remove([currentPath]);
+      const result = await supabase.from(config.table).update({ [fieldKey]: null }).eq("id", id);
+      error = result.error;
+    }
 
     if (error) {
       return { status: "error", message: "No se pudo quitar el archivo del registro." };
@@ -135,3 +154,4 @@ export async function deleteResourceFile(
     return { status: "error", message: err instanceof Error ? err.message : "Error inesperado." };
   }
 }
+

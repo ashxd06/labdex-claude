@@ -213,7 +213,7 @@ export async function retrieveFicheContext(fiche: FicheContext): Promise<Context
   if (!table) return null;
 
   const row = await getResourceRowBySlug<Record<string, unknown>>(table, fiche.slug);
-  if (!row || row["is_active"] !== true) return null;
+  if (!row || row["is_active"] !== true || row["status"] !== "published") return null;
 
   const titleField = fiche.sourceType === "microorganism" ? "scientific_name" : fiche.sourceType === "document" ? "title" : "name";
   const bodyColumns = Object.keys(row).filter(
@@ -244,3 +244,4 @@ export async function retrieveFicheContext(fiche: FicheContext): Promise<Context
     }),
   };
 }
+

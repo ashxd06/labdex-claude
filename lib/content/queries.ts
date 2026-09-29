@@ -50,7 +50,7 @@ export async function listResourceRows<T>(
   let query = supabase.from(table).select("*");
 
   if (onlyActive) {
-    query = query.eq("is_active", true);
+    query = query.eq("is_active", true).eq("status", "published");
   }
   if (categoryId) {
     query = query.eq("category_id", categoryId);
@@ -100,7 +100,7 @@ export async function listResourceRowsPaged<T>(
 
   let query = supabase.from(table).select("*", { count: "exact" });
 
-  if (onlyActive) query = query.eq("is_active", true);
+  if (onlyActive) query = query.eq("is_active", true).eq("status", "published");
   if (categoryId) query = query.eq("category_id", categoryId);
   if (kind) query = query.eq("kind", kind);
   if (search && searchColumns.length > 0) {
@@ -160,7 +160,10 @@ export async function getResourceRowById<T>(
     console.error(`[getResourceRowById:${resourceKey}]`, error.message);
     return null;
   }
-  return (data ?? null) as T | null;
+  if (!data) return null;
+  const { data: draft } = await supabase.from("content_drafts").select("payload")
+    .eq("resource_key", resourceKey).eq("record_id", id).maybeSingle();
+  return { ...data, ...((draft?.payload ?? {}) as Record<string, unknown>) } as T;
 }
 
 /**
@@ -173,11 +176,11 @@ export interface CountResult {
   error: string | null;
 }
 
-export async function countResourceRowsResult(table: string): Promise<CountResult> {
+export async function countResourceRowsResult(table: string, publicOnly = false): Promise<CountResult> {
   const supabase = await createClient();
-  const { count, error } = await supabase
-    .from(table)
-    .select("*", { count: "exact", head: true });
+  let query = supabase.from(table).select("*", { count: "exact", head: true });
+  if (publicOnly) query = query.eq("is_active", true).eq("status", "published");
+  const { count, error } = await query;
 
   if (error) {
     console.error(`[countResourceRowsResult:${table}]`, error.message);
@@ -238,6 +241,7 @@ export async function getCategoryContentCounts(
         .from(table)
         .select("category_id")
         .eq("is_active", true)
+        .eq("status", "published")
         .in("category_id", categoryIds)
         .then((result) => ({ table, ...result }))
     )
@@ -286,3 +290,4 @@ export async function getCategoryIdsBySlug(
   }
   return { map, error: null };
 }
+
