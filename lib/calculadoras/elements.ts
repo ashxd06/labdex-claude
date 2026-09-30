@@ -182,4 +182,3 @@ export const ELEMENT_FAMILIES: ElementFamily[] = [
   "Alcalinos", "Alcalinotérreos", "Metales de transición", "Otros metales", "Metaloides",
   "No metales", "Halógenos", "Gases nobles", "Lantánidos", "Actínidos",
 ];
-

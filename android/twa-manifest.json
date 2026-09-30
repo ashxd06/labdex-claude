@@ -16,10 +16,6 @@
   "iconUrl": "https://labdex-claude.vercel.app/icon",
   "maskableIconUrl": "https://labdex-claude.vercel.app/icon",
   "splashScreenFadeOutDuration": 300,
-  "signingKey": {
-    "path": "C:\\Users\\Satoshi\\Documents\\Codex\\2026-09-28\\re\\labdex-claude\\android\\android.keystore",
-    "alias": "labdex"
-  },
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
   "shortcuts": [],

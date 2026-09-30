@@ -5,7 +5,12 @@ import {
   buildSynthesisSystemPrompt,
   buildSynthesisUserMessage,
 } from "@/lib/estudio/analysis/prompts";
-import { safeParseJson, type ChunkAnalysisResult, type SynthesisResult } from "@/lib/estudio/analysis/types";
+import {
+  safeParseJson,
+  validateChunkAnalysisResult,
+  validateSynthesisResult,
+  type ChunkAnalysisResult,
+} from "@/lib/estudio/analysis/types";
 import {
   getGeminiAdapter,
   isGeminiConfigured,
@@ -60,7 +65,7 @@ async function analyzeChunk(
     maxOutputTokens: 8192,
   });
 
-  return safeParseJson<ChunkAnalysisResult>(raw);
+  return validateChunkAnalysisResult(safeParseJson<unknown>(raw), chunk);
 }
 
 /**
@@ -89,7 +94,7 @@ export async function analyzeStudyMaterial(params: {
   for (const chunk of chunks) {
     try {
       const result = await analyzeChunk(params.title, plan.pageCount, chunk);
-      if (result && Array.isArray(result.pages)) {
+      if (result) {
         chunkResults.push(result);
       } else {
         chunkFailures.push({ startPage: chunk.startPage, endPage: chunk.endPage });
@@ -109,20 +114,22 @@ export async function analyzeStudyMaterial(params: {
     );
   }
 
+  const pagesActuallyProcessed = chunkResults.reduce((sum, chunk) => sum + chunk.pages.length, 0);
+
   const synthesisRaw = await getGeminiAdapter().generate({
     systemInstruction: buildSynthesisSystemPrompt(),
     history: [],
     userMessage: buildSynthesisUserMessage({
       materialTitle: params.title,
       pageCount: plan.pageCount,
-      pagesProcessed: plan.pagesToProcess,
+      pagesProcessed: pagesActuallyProcessed,
       truncated: plan.truncated,
       chunkResults,
       chunkFailures,
     }),
   });
 
-  const synthesis = safeParseJson<SynthesisResult>(synthesisRaw);
+  const synthesis = validateSynthesisResult(safeParseJson<unknown>(synthesisRaw));
   if (!synthesis) {
     throw new StudyMaterialAnalysisError(
       "No se pudo generar el material de estudio a partir del documento analizado."
@@ -135,6 +142,12 @@ export async function analyzeStudyMaterial(params: {
     .map((p) => ({ page: p.page, text: p.text ?? "", unclear: Boolean(p.unclear) }));
 
   const processingNotes = [...(synthesis.notes ?? [])];
+  const unclearPages = [...new Set(pageIndex.filter((page) => page.unclear).map((page) => page.page))];
+  if (unclearPages.length > 0) {
+    processingNotes.push(
+      `No se pudo interpretar con suficiente claridad el contenido de las páginas ${unclearPages.join(", ")}. Revísalas en el PDF original antes de estudiar esos datos.`
+    );
+  }
   if (plan.truncated && !processingNotes.some((n) => n.includes(String(plan.pagesToProcess)))) {
     processingNotes.push(
       `Este documento tiene ${plan.pageCount} páginas. Por un límite técnico de esta fase, solo se procesaron las primeras ${plan.pagesToProcess}.`
@@ -144,8 +157,6 @@ export async function analyzeStudyMaterial(params: {
     const ranges = chunkFailures.map((f) => `${f.startPage}-${f.endPage}`).join(", ");
     processingNotes.push(`No se pudieron analizar las páginas ${ranges} por un error técnico. Puedes volver a subir el archivo para intentarlo de nuevo.`);
   }
-
-  const pagesActuallyProcessed = chunkResults.reduce((sum, c) => sum + c.pages.length, 0);
 
   return {
     content: {

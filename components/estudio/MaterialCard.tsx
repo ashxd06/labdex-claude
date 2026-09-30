@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Trash2, AlertTriangle } from "lucide-react";
+import { FileText, Trash2, AlertTriangle, RotateCw } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { STATUS_LABELS, STATUS_TONES } from "@/components/estudio/statusMeta";
@@ -14,10 +14,12 @@ function formatDate(iso: string): string {
 interface MaterialCardProps {
   material: StudyMaterialSummaryView;
   onDelete: (id: string) => void;
+  onRetry: (id: string) => void;
   deleting: boolean;
+  retrying: boolean;
 }
 
-export function MaterialCard({ material, onDelete, deleting }: MaterialCardProps) {
+export function MaterialCard({ material, onDelete, onRetry, deleting, retrying }: MaterialCardProps) {
   const isReady = material.status === "listo";
   const isProcessing = material.status === "subiendo" || material.status === "procesando";
 
@@ -32,8 +34,11 @@ export function MaterialCard({ material, onDelete, deleting }: MaterialCardProps
         <div>
           <p className="line-clamp-2 text-sm font-medium text-text">{material.title}</p>
           <p className="mt-1 text-xs text-text-faint">
-            {material.pageCount ? `${material.pageCount} páginas` : material.originalFilename}
-            {material.truncated ? " · procesado parcialmente" : ""}
+            {material.pageCount
+              ? material.truncated && material.pagesProcessed !== null
+                ? `${material.pagesProcessed} de ${material.pageCount} páginas procesadas`
+                : `${material.pageCount} páginas`
+              : material.originalFilename}
           </p>
         </div>
 
@@ -62,6 +67,20 @@ export function MaterialCard({ material, onDelete, deleting }: MaterialCardProps
             <span className="flex-1 rounded-md bg-surface-2 px-3 py-2 text-center text-sm text-text-muted">
               Procesando…
             </span>
+          ) : material.status === "error" && material.hasOriginalPdf ? (
+            <button
+              type="button"
+              onClick={() => onRetry(material.id)}
+              disabled={retrying || deleting}
+              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
+            >
+              <RotateCw className={`size-4 ${retrying ? "animate-spin" : ""}`} aria-hidden="true" />
+              {retrying ? "Reintentando…" : "Reintentar análisis"}
+            </button>
+          ) : material.status === "error" ? (
+            <span className="flex-1 rounded-md bg-surface-2 px-3 py-2 text-center text-xs text-text-muted">
+              Vuelve a subir el PDF para intentarlo de nuevo
+            </span>
           ) : (
             <span className="flex-1 rounded-md bg-surface-2 px-3 py-2 text-center text-sm text-text-muted">
               No disponible
@@ -70,7 +89,7 @@ export function MaterialCard({ material, onDelete, deleting }: MaterialCardProps
           <button
             type="button"
             onClick={() => onDelete(material.id)}
-            disabled={deleting}
+            disabled={deleting || retrying}
             aria-label={`Eliminar ${material.title}`}
             className="rounded-md p-2 text-text-faint hover:bg-danger-soft hover:text-danger disabled:opacity-50"
           >

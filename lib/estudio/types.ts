@@ -95,6 +95,7 @@ export interface StudyMaterialSummaryView {
   pageCount: number | null;
   pagesProcessed: number | null;
   truncated: boolean;
+  hasOriginalPdf: boolean;
   errorMessage: string | null;
   lastStudiedAt: string | null;
   createdAt: string;
@@ -109,6 +110,7 @@ export function toSummaryView(record: StudyMaterialRecord): StudyMaterialSummary
     pageCount: record.page_count,
     pagesProcessed: record.pages_processed,
     truncated: record.truncated,
+    hasOriginalPdf: Boolean(record.storage_path),
     errorMessage: record.error_message,
     lastStudiedAt: record.last_studied_at,
     createdAt: record.created_at,

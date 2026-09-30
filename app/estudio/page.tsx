@@ -17,6 +17,7 @@ export default function EstudioPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const loadMaterials = useCallback(async () => {
     try {
@@ -64,8 +65,27 @@ export default function EstudioPage() {
       await loadMaterials();
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
+      // A fallida puede haber creado un registro con el original conservado;
+      // recargamos para que aparezca la acción de reintento.
+      await loadMaterials();
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleRetry(id: string) {
+    setRetryingId(id);
+    setUploadError(null);
+    try {
+      const res = await fetch(`/api/estudio/materials/${id}/retry`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "No se pudo reintentar el análisis.");
+      await loadMaterials();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
+      await loadMaterials();
+    } finally {
+      setRetryingId(null);
     }
   }
 
@@ -130,7 +150,9 @@ export default function EstudioPage() {
                 key={material.id}
                 material={material}
                 onDelete={handleDelete}
+                onRetry={handleRetry}
                 deleting={deletingId === material.id}
+                retrying={retryingId === material.id}
               />
             ))}
           </div>

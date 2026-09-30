@@ -162,4 +162,3 @@ export function MolarityCalculator({ initialMolarMass, formula }: { initialMolar
     </div>
   );
 }
-

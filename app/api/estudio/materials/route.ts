@@ -3,10 +3,10 @@ import { getSession } from "@/lib/auth/getSession";
 import { estudioClient } from "@/lib/estudio/shared";
 import {
   buildStoragePath,
-  deleteStoredPdf,
   uploadOriginalPdf,
   validateUploadFile,
 } from "@/lib/estudio/storage";
+import { persistStudyMaterialAnalysis } from "@/lib/estudio/analysis/persist";
 import {
   analyzeStudyMaterial,
   StudyMaterialAnalysisError,
@@ -141,25 +141,15 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const result = await analyzeStudyMaterial({ title, pdfBytes: new Uint8Array(arrayBuffer) });
 
-    const { error: updateError } = await supabase
-      .from("study_materials")
-      .update({
-        status: "listo",
-        page_count: result.pageCount,
-        pages_processed: result.pagesProcessed,
-        truncated: result.truncated,
-        error_message: null,
-        summary: result.content.summary,
-        key_concepts: result.content.keyConcepts,
-        must_remember: result.content.mustRemember,
-        simple_explanation: result.content.simpleExplanation,
-        page_index: result.content.pageIndex,
-        processing_notes: result.content.processingNotes,
-      })
-      .eq("id", materialId);
+    const persistError = await persistStudyMaterialAnalysis(supabase, materialId, result);
 
-    if (updateError) {
-      console.error("[estudio:materials] persist analysis", updateError.message);
+    if (persistError) {
+      console.error("[estudio:materials] persist analysis", persistError);
+      await supabase
+        .from("study_materials")
+        .update({ status: "error", error_message: "El material se procesó, pero no se pudo guardar el resultado." })
+        .eq("id", materialId)
+        .eq("user_id", user.id);
       return errorResponse("El material se procesó pero no se pudo guardar el resultado.", 500);
     }
 
@@ -185,11 +175,8 @@ export async function POST(request: NextRequest) {
       .update({ status: "error", error_message: message })
       .eq("id", materialId);
 
-    // Si falló antes de generar nada útil, no dejamos el PDF huérfano en
-    // Storage: se conserva únicamente si el estudiante querrá reintentar
-    // desde el mismo archivo en una fase futura. Por ahora, dado que no hay
-    // botón de "reprocesar", se elimina para no acumular archivos inútiles.
-    await deleteStoredPdf(supabase, storagePath);
+    // Conservamos el original para que el estudiante pueda volver a intentar
+    // el análisis sin cargar el PDF otra vez.
 
     return errorResponse(message, 502);
   }

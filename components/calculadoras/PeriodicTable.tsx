@@ -143,4 +143,3 @@ function ElementTile({ element, count, onSelect, compact = false }: { element: (
     </button>
   );
 }
-

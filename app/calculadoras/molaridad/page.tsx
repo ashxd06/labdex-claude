@@ -35,4 +35,3 @@ export default async function MolaridadPage({ searchParams }: MolaridadPageProps
     </div>
   );
 }
-

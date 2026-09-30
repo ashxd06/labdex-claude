@@ -17,6 +17,8 @@ const MAX_CONCEPTS_IN_PROMPT = 60;
 
 const GROUNDING_RULES = `REGLAS DE FUNDAMENTACIÓN (obligatorias):
 - Tu única fuente es el contenido entregado a continuación, marcado como "CONTENIDO DEL MATERIAL". No uses conocimiento externo para inventar hechos, enfermedades, cifras o ejemplos que no estén en ese contenido.
+- Haz una comprobación final de coherencia científica: no conviertas en respuesta correcta una afirmación que contradiga otra parte del material; no mezcles resultados distintos de una prueba; distingue "lo que afirma el apunte" de una regla universal. Si detectas una posible equivocación del apunte, omite ese punto en vez de crear una tarjeta/pregunta engañosa.
+- Comprueba que la respuesta correcta esté respaldada claramente por el texto de página y que la explicación no introduzca datos nuevos. Las páginas citadas deben contener realmente el dato evaluado; si no puedes verificarlo, usa null.
 - Si el contenido no alcanza para generar la cantidad solicitada de tarjetas o preguntas con calidad y sin inventar nada, genera menos. Nunca rellenes con información inventada solo para completar una cantidad.
 - Usa terminología científica correcta y consistente con el material.
 - Evita preguntas ambiguas o que dependan de una interpretación subjetiva.
